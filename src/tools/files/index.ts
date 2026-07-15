@@ -4,6 +4,7 @@ import { registerReadTool } from "./read.js";
 import { registerWriteTool } from "./write.js";
 import { registerCreateFolderTool } from "./mkdir.js";
 import { registerDeleteTool } from "./delete.js";
+import { registerMoveTool } from "./move.js";
 
 export function registerFilesTools(server: McpServer, env: Env): void {
   registerListTool(server, env);
@@ -11,4 +12,5 @@ export function registerFilesTools(server: McpServer, env: Env): void {
   registerWriteTool(server, env);
   registerCreateFolderTool(server, env);
   registerDeleteTool(server, env);
+  registerMoveTool(server, env);
 }

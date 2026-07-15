@@ -115,4 +115,81 @@ export class WebDAVClient extends NextcloudBase {
       expectStatus: [200, 204, 404],
     });
   }
+
+  async stat(path: string): Promise<FileEntry> {
+    const url = this.davPathNoEncode(path);
+
+    const res = await this.request("PROPFIND", url, {
+      headers: { Depth: "0", "Content-Type": "application/xml" },
+      body: PROPFIND_BODY,
+    });
+
+    const xml = await res.text();
+    const parsed = parser.parse(xml);
+    const responses: any[] = [].concat(parsed.multistatus?.response ?? []);
+    const r = responses[0];
+    if (!r) throw new Error(`No stat response for: ${path}`);
+
+    const href: string = r.href ?? "";
+    const name = decodeURIComponent(
+      href.replace(/\/$/, "").split("/").pop() ?? "",
+    );
+    const prop = r.propstat?.prop ?? {};
+
+    return {
+      name,
+      path,
+      isDirectory: !!prop.resourcetype?.collection,
+      size: prop.getcontentlength ? Number(prop.getcontentlength) : null,
+      contentType: prop.getcontenttype ?? null,
+      lastModified: prop.getlastmodified ?? null,
+    };
+  }
+
+  async copy(
+    src: string,
+    dst: string,
+    force: boolean,
+  ): Promise<{ copied: boolean; conflict?: FileEntry }> {
+    const destUrl = `${this.host}${this.webdavBasePath()}/${dst.replace(/^\/+/, "")}`;
+
+    const res = await this.request("COPY", this.davPathNoEncode(src), {
+      headers: {
+        Destination: destUrl,
+        Overwrite: force ? "T" : "F",
+      },
+      expectStatus: [201, 204, 412],
+    });
+
+    if (res.status === 412) {
+      const meta = await this.stat(dst);
+      return { copied: false, conflict: meta };
+    }
+
+    return { copied: true };
+  }
+
+  async move(
+    src: string,
+    dst: string,
+    force: boolean,
+  ): Promise<{ moved: boolean; conflict?: FileEntry }> {
+    const destUrl = `${this.host}${this.webdavBasePath()}/${dst.replace(/^\/+/, "")}`;
+
+    const res = await this.request("MOVE", this.davPathNoEncode(src), {
+      headers: {
+        Destination: destUrl,
+        Overwrite: force ? "T" : "F",
+      },
+      expectStatus: [201, 204, 412],
+    });
+
+    if (res.status === 412) {
+      // Destination exists and force is false — return conflict metadata
+      const meta = await this.stat(dst);
+      return { moved: false, conflict: meta };
+    }
+
+    return { moved: true };
+  }
 }
