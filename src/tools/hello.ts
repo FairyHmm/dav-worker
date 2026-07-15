@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { NextcloudBase } from "../clients/base.js";
+import { ok, err } from "../utils.js";
 
 export function registerHelloTool(server: McpServer, env: Env): void {
   server.tool(
@@ -16,24 +17,9 @@ export function registerHelloTool(server: McpServer, env: Env): void {
         const status = res.status;
         const version = res.headers.get("x-nextcloud-version") ?? "unknown";
 
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Nextcloud reachable — HTTP ${status}, version: ${version}`,
-            },
-          ],
-        };
+        return ok(`Nextcloud reachable — HTTP ${status}, version: ${version}`);
       } catch (e) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error: ${e instanceof Error ? e.message : String(e)}`,
-            },
-          ],
-          isError: true,
-        };
+        return err(e);
       }
     },
   );

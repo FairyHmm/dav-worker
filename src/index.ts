@@ -1,6 +1,7 @@
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerHelloTool } from "./tools/hello.js";
+import { registerFilesTools } from "./tools/files.js";
 
 function createServer(env: Env): McpServer {
   const server = new McpServer({
@@ -10,6 +11,7 @@ function createServer(env: Env): McpServer {
 
   // Dev-only — remove before production deploy
   registerHelloTool(server, env);
+  registerFilesTools(server, env);
 
   return server;
 }
