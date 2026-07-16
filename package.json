@@ -15,9 +15,16 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "agents": "^0.17.1",
     "fast-xml-parser": "^4.4.0",
+    "mdast-util-to-string": "^4.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-math": "^6.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/mdast": "^4.0.4",
     "@types/node": "^26.1.1",
     "oxfmt": "^0.56.0",
     "oxlint": "^1.71.0",
