@@ -1,31 +1,10 @@
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import remarkFrontmatter from "remark-frontmatter";
-import remarkMath from "remark-math";
 import { toString } from "mdast-util-to-string";
 import type { Root, RootContent, Heading } from "mdast";
-
-// Naive plain string preprocess syntax extension for obsidian comments
-export function preprocessPercentComments(source: string): string {
-  return source.replace(
-    /%%([\s\S]*?)%%/g,
-    (_match, inner: string) => `<!--${inner}-->`,
-  );
-}
-
-const processor = unified()
-  .use(remarkParse)
-  .use(remarkFrontmatter, ["yaml"])
-  .use(remarkMath);
-
-export function parseDocument(source: string): Root {
-  return processor.parse(preprocessPercentComments(source)) as Root;
-}
 
 export interface HeadingNode {
   level: number;
   title: string;
-  node: Heading; // kept for a future stringify/rebuild step
+  node: Heading; // kept for the block-read/write reconstruction step
   body: RootContent[]; // nodes between this heading and its first child heading
   children: HeadingNode[];
 }
@@ -34,8 +13,8 @@ export interface HeadingNode {
 // so this reconstructs the hierarchy with a stack keyed on depth.
 //
 // includeBody is false for outline() — no reason to allocate and hold onto
-// body node arrays when only the heading titles/levels are needed. Future
-// read/write should call this with includeBody = true (the default).
+// body node arrays when only the heading titles/levels are needed. Block
+// read/write call this with includeBody = true (the default).
 export function buildHeadingTree(
   root: Root,
   includeBody = true,
@@ -79,22 +58,4 @@ export function buildHeadingTree(
   }
 
   return topLevel;
-}
-
-export interface OutlineEntry {
-  level: number;
-  title: string;
-  children: OutlineEntry[];
-}
-
-function toOutline(headings: HeadingNode[]): OutlineEntry[] {
-  return headings.map((h) => ({
-    level: h.level,
-    title: h.title,
-    children: toOutline(h.children),
-  }));
-}
-
-export function outline(source: string): OutlineEntry[] {
-  return toOutline(buildHeadingTree(parseDocument(source), false));
 }

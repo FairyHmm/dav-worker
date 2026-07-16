@@ -5,6 +5,14 @@ export const PathSchema = z
   .string()
   .describe("Vault-relative path (e.g. 'Documents/notes.md' or '')");
 
+export const BlockSchema = z
+  .string()
+  .optional()
+  .describe(
+    "Heading title to read as a scoped block (that heading plus all its " +
+      "nested content and subheadings). Omit to read the whole file.",
+  );
+
 export const ForceSchema = z
   .boolean()
   .optional()
