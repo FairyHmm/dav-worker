@@ -32,6 +32,18 @@ export const ModeSchema = z
       "'append' adds after it. Default: 'replace'.",
   );
 
+export const DepthSchema = z
+  .number()
+  .int()
+  .optional()
+  .default(1)
+  .describe(
+    "How many levels deep to list. Default 1 (immediate children only). " +
+      "-1 = full recursive tree (Depth: infinity). Use -1 only when the directory " +
+      "structure is completely unknown — it is expensive on large or deeply " +
+      "nested directories and can hit Worker CPU limits. Prefer an explicit depth.",
+  );
+
 export const ForceSchema = z
   .boolean()
   .optional()

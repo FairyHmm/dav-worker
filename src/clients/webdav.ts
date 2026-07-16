@@ -38,12 +38,14 @@ export class WebDAVClient extends NextcloudBase {
     return `${this.webdavBasePath()}/${clean}`;
   }
 
-  async list(path: string = ""): Promise<FileEntry[]> {
+  async list(path: string = "", depth: number = 1): Promise<FileEntry[]> {
     let url = this.davPathNoEncode(path);
     if (!url.endsWith("/")) url += "/";
 
+    const depthHeader = depth === -1 ? "infinity" : String(depth);
+
     const res = await this.request("PROPFIND", url, {
-      headers: { Depth: "1", "Content-Type": "application/xml" },
+      headers: { Depth: depthHeader, "Content-Type": "application/xml" },
       body: PROPFIND_BODY,
     });
 
@@ -51,17 +53,28 @@ export class WebDAVClient extends NextcloudBase {
     const parsed = parser.parse(xml);
     const responses: any[] = [].concat(parsed.multistatus?.response ?? []);
 
+    const basePath = this.webdavBasePath();
+
     // Skip first entry (the directory itself)
     return responses.slice(1).map((r: any) => {
       const href: string = r.href ?? "";
-      const name = decodeURIComponent(
-        href.replace(/\/$/, "").split("/").pop() ?? "",
-      );
+      const decodedHref = decodeURIComponent(href.replace(/\/$/, ""));
+      const name = decodedHref.split("/").pop() ?? "";
+
+      // Derive the vault-relative path from the href itself, rather than
+      // concatenating the queried path + name — this stays correct for
+      // nested entries returned by depth > 1 / infinity.
+      let relPath = decodedHref;
+      const baseIdx = decodedHref.indexOf(basePath);
+      if (baseIdx !== -1) {
+        relPath = decodedHref.slice(baseIdx + basePath.length).replace(/^\/+/, "");
+      }
+
       const prop = r.propstat?.prop ?? {};
 
       return {
         name,
-        path: path ? `${path.replace(/\/$/, "")}/${name}` : name,
+        path: relPath,
         isDirectory: !!prop.resourcetype?.collection,
         size: prop.getcontentlength ? Number(prop.getcontentlength) : null,
         contentType: prop.getcontenttype ?? null,

@@ -6,6 +6,8 @@ import { registerCreateFolderTool } from "./mkdir.js";
 import { registerDeleteTool } from "./delete.js";
 import { registerMoveTool } from "./move.js";
 import { registerOutlineTool } from "./outline.js";
+import { registerStatTool } from "./stat.js";
+import { registerCopyTool } from "./copy.js";
 
 export function registerFilesTools(server: McpServer, env: Env): void {
   registerListTool(server, env);
@@ -15,4 +17,6 @@ export function registerFilesTools(server: McpServer, env: Env): void {
   registerDeleteTool(server, env);
   registerMoveTool(server, env);
   registerOutlineTool(server, env);
+  registerStatTool(server, env);
+  registerCopyTool(server, env);
 }
