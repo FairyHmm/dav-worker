@@ -9,8 +9,27 @@ export const BlockSchema = z
   .string()
   .optional()
   .describe(
-    "Heading title to read as a scoped block (that heading plus all its " +
-      "nested content and subheadings). Omit to read the whole file.",
+    "Heading title to scope this operation to a specific section. " +
+      "Omit to operate on the whole file.",
+  );
+
+export const ScopeSchema = z
+  .enum(["body", "subtree"])
+  .optional()
+  .default("body")
+  .describe(
+    "Only used with `block`. 'body' = just the content directly under the " +
+      "heading, before any subheadings. 'subtree' = the heading line itself " +
+      "plus all nested content and subheadings. Default: 'body'.",
+  );
+
+export const ModeSchema = z
+  .enum(["replace", "append"])
+  .optional()
+  .default("replace")
+  .describe(
+    "Only used with `block`. 'replace' overwrites the scoped section, " +
+      "'append' adds after it. Default: 'replace'.",
   );
 
 export const ForceSchema = z
