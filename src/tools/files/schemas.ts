@@ -34,14 +34,18 @@ export const ModeSchema = z
 
 export const DepthSchema = z
   .number()
-  .int()
   .optional()
   .default(1)
+  // Round instead of rejecting non-integers, and collapse any negative
+  // value to -1 (WebDAVClient treats anything < 0 as "infinity") rather
+  // than requiring the caller to pass exactly -1.
+  .transform((v) => (v < 0 ? -1 : Math.round(v)))
   .describe(
     "How many levels deep to list. Default 1 (immediate children only). " +
-      "-1 = full recursive tree (Depth: infinity). Use -1 only when the directory " +
-      "structure is completely unknown — it is expensive on large or deeply " +
-      "nested directories and can hit Worker CPU limits. Prefer an explicit depth.",
+      "Any negative value = full recursive tree (Depth: infinity). Use this only " +
+      "when the directory structure is completely unknown — it is expensive on " +
+      "large or deeply nested directories and can hit Worker CPU limits. Prefer " +
+      "an explicit depth.",
   );
 
 export const ForceSchema = z

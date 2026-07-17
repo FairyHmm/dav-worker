@@ -50,21 +50,34 @@ export interface FileEntry {
 }
 
 export class WebDAVClient extends NextcloudBase {
+  // Single source of truth for turning a vault-relative path into a WebDAV
+  // URL path. Encodes each segment individually — encoding the whole
+  // string in one pass (the old `davPath`) turns `/` into `%2F` and breaks
+  // the path structure; not encoding at all (the old `davPathNoEncode`,
+  // used everywhere) breaks on spaces and reserved characters (`#`, `?`,
+  // `%`). Every request — including the absolute Destination URL for
+  // MOVE/COPY — must go through this one method.
   private davPath(path: string): string {
     const clean = path.replace(/^\/+/, "");
-    return `${this.webdavBasePath()}/${encodeURIComponent(clean)}`;
+    const encoded = clean
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    return `${this.webdavBasePath()}/${encoded}`;
   }
 
-  private davPathNoEncode(path: string): string {
-    const clean = path.replace(/^\/+/, "");
-    return `${this.webdavBasePath()}/${clean}`;
+  private davUrl(path: string): string {
+    return `${this.host}${this.davPath(path)}`;
   }
 
   async list(path: string = "", depth: number = 1): Promise<FileEntry[]> {
-    let url = this.davPathNoEncode(path);
+    let url = this.davPath(path);
     if (!url.endsWith("/")) url += "/";
 
-    const depthHeader = depth === -1 ? "infinity" : String(depth);
+    // Any negative depth means "as deep as it goes" — round trips through
+    // DepthSchema as -1, but treat everything below 0 the same way rather
+    // than requiring exactly -1.
+    const depthHeader = depth < 0 ? "infinity" : String(depth);
 
     const res = await this.request("PROPFIND", url, {
       headers: { Depth: depthHeader, "Content-Type": "application/xml" },
@@ -106,7 +119,16 @@ export class WebDAVClient extends NextcloudBase {
   }
 
   async read(path: string): Promise<{ content: string; contentType: string }> {
-    const res = await this.request("GET", this.davPathNoEncode(path));
+    // Same treatment as the other not-found cases (mkdir's 405, delete's
+    // 404): fold the expected failure status into expectStatus and turn it
+    // into a clear message, instead of letting the generic
+    // `Nextcloud GET path → 404` bubble up from NextcloudBase.request.
+    const res = await this.request("GET", this.davPath(path), {
+      expectStatus: [200, 404],
+    });
+    if (res.status === 404) {
+      throw new Error(`File not found: ${path}`);
+    }
 
     const contentType =
       res.headers.get("content-type") ?? "application/octet-stream";
@@ -126,7 +148,7 @@ export class WebDAVClient extends NextcloudBase {
   }
 
   async write(path: string, content: string): Promise<{ created: boolean }> {
-    const res = await this.request("PUT", this.davPathNoEncode(path), {
+    const res = await this.request("PUT", this.davPath(path), {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
       body: content,
     });
@@ -137,7 +159,7 @@ export class WebDAVClient extends NextcloudBase {
   async mkdir(
     path: string,
   ): Promise<{ created: boolean; alreadyExists: boolean }> {
-    const res = await this.request("MKCOL", this.davPathNoEncode(path), {
+    const res = await this.request("MKCOL", this.davPath(path), {
       expectStatus: [201, 405],
     });
 
@@ -146,13 +168,13 @@ export class WebDAVClient extends NextcloudBase {
   }
 
   async delete(path: string): Promise<void> {
-    await this.request("DELETE", this.davPathNoEncode(path), {
+    await this.request("DELETE", this.davPath(path), {
       expectStatus: [200, 204, 404],
     });
   }
 
   async stat(path: string): Promise<FileEntry> {
-    const url = this.davPathNoEncode(path);
+    const url = this.davPath(path);
 
     const res = await this.request("PROPFIND", url, {
       headers: { Depth: "0", "Content-Type": "application/xml" },
@@ -186,9 +208,9 @@ export class WebDAVClient extends NextcloudBase {
     dst: string,
     force: boolean,
   ): Promise<{ copied: boolean; conflict?: FileEntry }> {
-    const destUrl = `${this.host}${this.webdavBasePath()}/${dst.replace(/^\/+/, "")}`;
+    const destUrl = this.davUrl(dst);
 
-    const res = await this.request("COPY", this.davPathNoEncode(src), {
+    const res = await this.request("COPY", this.davPath(src), {
       headers: {
         Destination: destUrl,
         Overwrite: force ? "T" : "F",
@@ -209,9 +231,9 @@ export class WebDAVClient extends NextcloudBase {
     dst: string,
     force: boolean,
   ): Promise<{ moved: boolean; conflict?: FileEntry }> {
-    const destUrl = `${this.host}${this.webdavBasePath()}/${dst.replace(/^\/+/, "")}`;
+    const destUrl = this.davUrl(dst);
 
-    const res = await this.request("MOVE", this.davPathNoEncode(src), {
+    const res = await this.request("MOVE", this.davPath(src), {
       headers: {
         Destination: destUrl,
         Overwrite: force ? "T" : "F",
