@@ -18,6 +18,28 @@ const parser = new XMLParser({
   removeNSPrefix: true,
 });
 
+// fast-xml-parser parses an empty self-closing tag like `<d:collection/>`
+// into `""`, not `true` — a truthiness check on the value is always false.
+// Presence of the key is what indicates a directory.
+function isCollection(prop: any): boolean {
+  return !!prop?.resourcetype && "collection" in prop.resourcetype;
+}
+
+// Nextcloud splits a <d:response> into multiple <d:propstat> blocks when
+// some requested properties don't apply (e.g. a directory has no
+// getcontentlength, so that prop comes back in its own 404 propstat).
+// Merge every propstat's props together instead of assuming a single one.
+function mergedProps(r: any): any {
+  const propstats: any[] = [].concat(r.propstat ?? []);
+  return propstats.reduce((acc, ps) => Object.assign(acc, ps?.prop ?? {}), {});
+}
+
+// A missing/inapplicable prop parses to `""`, not undefined/null — normalize
+// it so callers can use straightforward null-checks.
+function propOrNull(value: unknown): string | null {
+  return value === "" || value == null ? null : String(value);
+}
+
 export interface FileEntry {
   name: string;
   path: string;
@@ -70,15 +92,15 @@ export class WebDAVClient extends NextcloudBase {
         relPath = decodedHref.slice(baseIdx + basePath.length).replace(/^\/+/, "");
       }
 
-      const prop = r.propstat?.prop ?? {};
+      const prop = mergedProps(r);
 
       return {
         name,
         path: relPath,
-        isDirectory: !!prop.resourcetype?.collection,
+        isDirectory: isCollection(prop),
         size: prop.getcontentlength ? Number(prop.getcontentlength) : null,
-        contentType: prop.getcontenttype ?? null,
-        lastModified: prop.getlastmodified ?? null,
+        contentType: propOrNull(prop.getcontenttype),
+        lastModified: propOrNull(prop.getlastmodified),
       };
     });
   }
@@ -147,15 +169,15 @@ export class WebDAVClient extends NextcloudBase {
     const name = decodeURIComponent(
       href.replace(/\/$/, "").split("/").pop() ?? "",
     );
-    const prop = r.propstat?.prop ?? {};
+    const prop = mergedProps(r);
 
     return {
       name,
       path,
-      isDirectory: !!prop.resourcetype?.collection,
+      isDirectory: isCollection(prop),
       size: prop.getcontentlength ? Number(prop.getcontentlength) : null,
-      contentType: prop.getcontenttype ?? null,
-      lastModified: prop.getlastmodified ?? null,
+      contentType: propOrNull(prop.getcontenttype),
+      lastModified: propOrNull(prop.getlastmodified),
     };
   }
 
