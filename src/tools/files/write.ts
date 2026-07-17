@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { WebDAVClient } from "../../clients/webdav.js";
-import { writeBlock } from "../../parser/block-write.js";
+import { writeBlock } from "../../parser/markdown/index.js";
 import { ok, err } from "../../utils.js";
 import { BlockSchema, ModeSchema, PathSchema, ScopeSchema } from "./schemas.js";
 

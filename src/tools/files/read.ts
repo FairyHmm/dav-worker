@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebDAVClient } from "../../clients/webdav.js";
-import { readBlock } from "../../parser/block-read.js";
+import { readBlock } from "../../parser/markdown/index.js";
 import { ok, err } from "../../utils.js";
 import { BlockSchema, PathSchema } from "./schemas.js";
 
