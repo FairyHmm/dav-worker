@@ -48,6 +48,26 @@ export const DepthSchema = z
       "an explicit depth.",
   );
 
+export const FromSchema = z
+  .number()
+  .int()
+  .min(1)
+  .optional()
+  .describe(
+    "Raw target: 1-indexed line to start at (inclusive). Mutually exclusive " +
+      "with `block`. Omit `to` to target a single line.",
+  );
+
+export const ToSchema = z
+  .number()
+  .int()
+  .min(1)
+  .optional()
+  .describe(
+    "Raw target: 1-indexed line to end at (inclusive). Only used together " +
+      "with `from`.",
+  );
+
 export const ForceSchema = z
   .boolean()
   .optional()
