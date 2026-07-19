@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WebDAVClient } from "../../clients/webdav.js";
+import { WebDAVClient } from "../../clients/webdav/index.js";
 import { ok, err } from "../../utils.js";
 import {
   PathSchema,

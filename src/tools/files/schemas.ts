@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { FileEntry } from "../../clients/webdav.js";
+import type { FileEntry } from "../../clients/webdav/index.js";
 
 export const PathSchema = z
   .string()
