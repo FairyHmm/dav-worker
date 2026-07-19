@@ -1,7 +1,7 @@
 import { NextcloudBase } from "../base.js";
 import { calendarPath } from "./url.js";
 import { lookupByUid } from "./uid-lookup.js";
-import { timeRangeQueryBody, parseReportResponses } from "./report.js";
+import { timeRangeQueryBody, travelForQueryBody, parseReportResponses } from "./report.js";
 import type { ComponentType, ReportEntry } from "./report.js";
 
 const ICAL_CONTENT_TYPE = "text/calendar; charset=utf-8";
@@ -79,6 +79,28 @@ export class CalDAVClient extends NextcloudBase {
     await this.request("DELETE", entry.href, {
       expectStatus: [204, 404],
     });
+  }
+
+  // Travel buffers (SPEC-SCHEDULES.md) are tagged with a custom
+  // X-DAV-WORKER-TRAVEL-FOR property pointing at the parent event's UID,
+  // always in the same calendar as the parent. Lookup and deletion are
+  // both href-direct once found — no separate UID needed by the caller.
+  async findTravelBuffersFor(
+    calendarName: string,
+    parentUid: string,
+  ): Promise<ReportEntry[]> {
+    const res = await this.request("REPORT", this.path(calendarName), {
+      headers: { Depth: "1", "Content-Type": "application/xml" },
+      body: travelForQueryBody(parentUid),
+      expectStatus: [207],
+    });
+    return parseReportResponses(await res.text());
+  }
+
+  async deleteHref(href: string): Promise<void> {
+    // Same idempotent contract as delete(): target already gone (404) is
+    // treated as success, not an error.
+    await this.request("DELETE", href, { expectStatus: [204, 404] });
   }
 }
 

@@ -19,6 +19,18 @@ export const DateTimeSchema = z
       "performed — pass an already zone-local value if that's what you mean.",
   );
 
+export const TravelSchema = z
+  .object({
+    before: z.string().optional().describe("Buffer duration before the event, e.g. '20m'."),
+    after: z.string().optional().describe("Buffer duration after the event, e.g. '15m'."),
+  })
+  .optional()
+  .describe(
+    "Optional travel buffers, created as separate linked VEVENTs in the " +
+      "same calendar (tagged X-DAV-WORKER-TRAVEL-FOR) rather than folded " +
+      "into the event itself.",
+  );
+
 export const IdSchema = z
   .string()
   .describe(

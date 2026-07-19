@@ -49,6 +49,20 @@ export function parseDurationMs(duration: string): number {
   return (hours * 60 + minutes) * 60_000;
 }
 
+// Shifts an ISO 8601 date-time by `ms`, for travel-buffer start/end math
+// (SPEC-SCHEDULES.md). Round-trips through Date, so the output is always a
+// UTC "Z" string even when the input was floating local time — acceptable
+// here since this is purely relative offset arithmetic around a single
+// reference point, and dav-worker doesn't carry an IANA tz database anyway
+// (see ical/component.ts's isoToBasic).
+export function shiftIso(iso: string, ms: number): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    throw new Error(`Cannot parse date-time value "${iso}".`);
+  }
+  return new Date(d.getTime() + ms).toISOString();
+}
+
 export type TimeWindowInput =
   | { from: number; to: number }
   | { from: string; to: string }

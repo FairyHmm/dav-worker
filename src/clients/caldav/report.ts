@@ -44,6 +44,29 @@ export function uidQueryBody(componentType: ComponentType, uid: string): string 
 </c:calendar-query>`;
 }
 
+// calendar-query REPORT filtered by the custom X-DAV-WORKER-TRAVEL-FOR
+// property, used to find/clean-up travel-buffer VEVENTs linked to a parent
+// event's UID (see SPEC-SCHEDULES.md's travel-buffer section). Buffers are
+// always VEVENTs (not VTODOs), so this doesn't take a componentType param.
+export function travelForQueryBody(parentUid: string): string {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop>
+    <d:getetag/>
+    <c:calendar-data/>
+  </d:prop>
+  <c:filter>
+    <c:comp-filter name="VCALENDAR">
+      <c:comp-filter name="VEVENT">
+        <c:prop-filter name="X-DAV-WORKER-TRAVEL-FOR">
+          <c:text-match>${xmlEscape(parentUid)}</c:text-match>
+        </c:prop-filter>
+      </c:comp-filter>
+    </c:comp-filter>
+  </c:filter>
+</c:calendar-query>`;
+}
+
 // calendar-query REPORT with a time-range comp-filter, for listing events in
 // a window. `startUtc`/`endUtc` must already be RFC 5545 UTC basic-format
 // strings (YYYYMMDDTHHMMSSZ) — formatting belongs to the caller (tools layer)

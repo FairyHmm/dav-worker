@@ -62,6 +62,25 @@ export function applyEventFields(event: ICalComponent, fields: EventFields): voi
   event.properties["LAST-MODIFIED"] = [{ value: stamp, params: {} }];
 }
 
+// Builds a travel-buffer VEVENT (SPEC-SCHEDULES.md): a plain event carrying
+// a custom X-DAV-WORKER-TRAVEL-FOR property pointing at the parent event's
+// UID. Deliberately separate from buildEventComponent — buffers have no
+// description/location and always need the linking property set.
+export function buildTravelBufferComponent(
+  uid: string,
+  parentUid: string,
+  title: string,
+  start: string,
+  end: string,
+): ICalComponent {
+  const event = newEvent(uid);
+  setText(event, "SUMMARY", title);
+  setText(event, "X-DAV-WORKER-TRAVEL-FOR", parentUid);
+  setDateTime(event, "DTSTART", start);
+  setDateTime(event, "DTEND", end);
+  return event;
+}
+
 export function extractEventSummary(entry: ReportEntry): EventSummary | null {
   if (!entry.calendarData) return null;
   const cal = parseCalendar(entry.calendarData);
