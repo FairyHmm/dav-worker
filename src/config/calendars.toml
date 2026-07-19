@@ -1,7 +1,7 @@
 [calendars]
-school = "School"
-work = "Work"
-projects = "Personal Projects"
-daily = "Daily Activities"
-social = "Social"
-matters = "Matters"
+school = "school"
+work = "work"
+projects = "personal-projects"
+daily = "daily-activities"
+social = "social"
+matters = "matters"
