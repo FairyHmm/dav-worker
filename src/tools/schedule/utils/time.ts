@@ -22,6 +22,33 @@ function toBasicUtc(d: Date): string {
   return d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
 }
 
+// Exposed for nc_schedule_free, which needs to turn REPORT-window boundaries
+// and event start/end values (both already RFC 5545 basic UTC strings) into
+// Dates for gap arithmetic, then back into basic UTC for output.
+export const dateToBasicUtc = toBasicUtc;
+
+export function basicUtcToDate(basic: string): Date {
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/.exec(basic);
+  if (!m) {
+    throw new Error(`Cannot parse date-time value "${basic}" as RFC 5545 basic UTC.`);
+  }
+  const [, y, mo, d, h, mi, s] = m;
+  return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
+}
+
+// Parses a duration like "1h", "30m", or "1h30m" into milliseconds.
+export function parseDurationMs(duration: string): number {
+  const match = /^(?:(\d+)h)?(?:(\d+)m)?$/.exec(duration.trim());
+  if (!match || (!match[1] && !match[2])) {
+    throw new Error(
+      `Invalid duration "${duration}". Expected e.g. "1h", "30m", or "1h30m".`,
+    );
+  }
+  const hours = match[1] ? parseInt(match[1], 10) : 0;
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  return (hours * 60 + minutes) * 60_000;
+}
+
 export type TimeWindowInput =
   | { from: number; to: number }
   | { from: string; to: string }
