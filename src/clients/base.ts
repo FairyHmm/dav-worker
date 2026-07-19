@@ -14,6 +14,10 @@ export class NextcloudBase {
     return `/remote.php/dav/files/${this.username}`;
   }
 
+  protected caldavBasePath(): string {
+    return `/remote.php/dav/calendars/${this.username}`;
+  }
+
   async request(
     method: string,
     path: string,
