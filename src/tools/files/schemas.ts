@@ -5,6 +5,17 @@ export const PathSchema = z
   .string()
   .describe("Vault-relative path (e.g. 'Documents/notes.md' or '')");
 
+export const LocationSchema = z
+  .string()
+  .optional()
+  .describe(
+    "Named location shortcut (see Docs/SPEC-LOCATIONS.md), resolved via " +
+      "the aliases/patterns config into a vault-relative path — e.g. " +
+      "'Nadir/spec' instead of the full underlying path. When provided, " +
+      "takes precedence over `path`. Unknown/unmatched locations return a " +
+      "clear error rather than falling back to `path`.",
+  );
+
 export const BlockSchema = z
   .string()
   .optional()

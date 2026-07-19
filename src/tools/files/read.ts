@@ -1,19 +1,37 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebDAVClient } from "../../clients/webdav.js";
 import { ok, err } from "../../utils.js";
-import { BlockSchema, FromSchema, PathSchema, ToSchema } from "./schemas.js";
+import {
+  BlockSchema,
+  FromSchema,
+  LocationSchema,
+  PathSchema,
+  ToSchema,
+} from "./schemas.js";
 import { resolveTarget } from "../../parser/resolve-target.js";
+import { resolveLocation } from "../../locations/index.js";
 
 export function registerReadTool(server: McpServer, env: Env): void {
-  server.tool(
+  server.registerTool(
     "nc_files_read",
-    "Read a text file from the Nextcloud vault. Returns an error for binary files. " +
-      "Pass `block` with a heading title to read only that heading's section " +
-      "(including its nested subheadings), or `from`/`to` for a 1-indexed line " +
-      "range, instead of the whole file.",
-    { path: PathSchema, block: BlockSchema, from: FromSchema, to: ToSchema },
-    async ({ path, block, from, to }) => {
+    {
+      description:
+        "Read a text file from the Nextcloud vault. Returns an error for binary files. " +
+        "Pass `block` with a heading title to read only that heading's section " +
+        "(including its nested subheadings), or `from`/`to` for a 1-indexed line " +
+        "range, instead of the whole file. Pass `location` instead of `path` to " +
+        "use a named location shortcut.",
+      inputSchema: {
+        path: PathSchema.optional(),
+        location: LocationSchema,
+        block: BlockSchema,
+        from: FromSchema,
+        to: ToSchema,
+      },
+    },
+    async ({ path: pathArg, location, block, from, to }) => {
       try {
+        const path = location ? resolveLocation(location) : (pathArg ?? "");
         const client = new WebDAVClient(env);
         const { content } = await client.read(path);
 

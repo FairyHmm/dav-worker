@@ -1,15 +1,26 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebDAVClient } from "../../clients/webdav.js";
 import { ok, err } from "../../utils.js";
-import { PathSchema, DepthSchema } from "./schemas.js";
+import { PathSchema, DepthSchema, LocationSchema } from "./schemas.js";
+import { resolveLocation } from "../../locations/index.js";
 
 export function registerListTool(server: McpServer, env: Env): void {
-  server.tool(
+  server.registerTool(
     "nc_files_list",
-    "List files and folders at a path in the Nextcloud vault. Use an empty string or '/' for the root.",
-    { path: PathSchema, depth: DepthSchema },
-    async ({ path, depth }) => {
+    {
+      description:
+        "List files and folders at a path in the Nextcloud vault. Use an empty " +
+        "string or '/' for the root. Pass `location` instead of `path` to use " +
+        "a named location shortcut.",
+      inputSchema: {
+        path: PathSchema.optional(),
+        location: LocationSchema,
+        depth: DepthSchema,
+      },
+    },
+    async ({ path: pathArg, location, depth }) => {
       try {
+        const path = location ? resolveLocation(location) : (pathArg ?? "");
         const client = new WebDAVClient(env);
         const entries = await client.list(path, depth);
 

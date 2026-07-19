@@ -5,32 +5,49 @@ import { ok, err } from "../../utils.js";
 import {
   BlockSchema,
   FromSchema,
+  LocationSchema,
   ModeSchema,
   PathSchema,
   ScopeSchema,
   ToSchema,
 } from "./schemas.js";
 import { resolveTarget } from "../../parser/resolve-target.js";
+import { resolveLocation } from "../../locations/index.js";
 
 export function registerWriteTool(server: McpServer, env: Env): void {
-  server.tool(
+  server.registerTool(
     "nc_files_write",
-    "Write text content to a file in the Nextcloud vault. Without `block` or " +
-      "`from`/`to`, overwrites (or creates) the whole file. With `block`, " +
-      "patches one heading's section (see `scope`/`mode`). With `from`/`to`, " +
-      "patches a 1-indexed line range (see `mode`). `block` and `from`/`to` " +
-      "are mutually exclusive.",
     {
-      path: PathSchema,
-      content: z.string().describe("Text content to write"),
-      block: BlockSchema,
-      scope: ScopeSchema,
-      mode: ModeSchema,
-      from: FromSchema,
-      to: ToSchema,
+      description:
+        "Write text content to a file in the Nextcloud vault. Without `block` or " +
+        "`from`/`to`, overwrites (or creates) the whole file. With `block`, " +
+        "patches one heading's section (see `scope`/`mode`). With `from`/`to`, " +
+        "patches a 1-indexed line range (see `mode`). `block` and `from`/`to` " +
+        "are mutually exclusive. Pass `location` instead of `path` to use a " +
+        "named location shortcut.",
+      inputSchema: {
+        path: PathSchema.optional(),
+        location: LocationSchema,
+        content: z.string().describe("Text content to write"),
+        block: BlockSchema,
+        scope: ScopeSchema,
+        mode: ModeSchema,
+        from: FromSchema,
+        to: ToSchema,
+      },
     },
-    async ({ path, content, block, scope, mode, from, to }) => {
+    async ({
+      path: pathArg,
+      location,
+      content,
+      block,
+      scope,
+      mode,
+      from,
+      to,
+    }) => {
       try {
+        const path = location ? resolveLocation(location) : (pathArg ?? "");
         const client = new WebDAVClient(env);
         const target = resolveTarget({ block, scope, from, to });
 
