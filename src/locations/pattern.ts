@@ -1,4 +1,4 @@
-import { getConfig } from "./config.js";
+import { getFilesConfig } from "../config/files.js";
 import { splitSegments, unescape, wildcardIndex } from "./path-segments.js";
 
 // What a pattern's wildcard captured from the input, if it had one.
@@ -57,7 +57,7 @@ function matchOne(patternKey: string, inputSegments: string[]): MatchAttempt {
 // input shape. Among multiple matches of the same kind, the last one
 // defined in the TOML wins.
 export function findMatchingPattern(inputSegments: string[]): PatternMatch {
-  const { patterns } = getConfig();
+  const { patterns } = getFilesConfig();
 
   let literal: PatternMatch | undefined;
   let wildcard: PatternMatch | undefined;
@@ -116,7 +116,7 @@ export function applyPattern(match: PatternMatch): string {
     return filledSegments.join("/");
   }
 
-  const { aliases } = getConfig();
+  const { aliases } = getFilesConfig();
   if (aliases[first] !== undefined) {
     return [`@${first}`, ...filledSegments.slice(1)].join("/");
   }

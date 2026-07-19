@@ -1,4 +1,4 @@
-import { getConfig } from "./config.js";
+import { getFilesConfig } from "../config/files.js";
 
 const MAX_ALIAS_DEPTH = 50;
 
@@ -18,7 +18,7 @@ export function expandAliases(path: string, depth = 0): string {
   const name = slashIdx === -1 ? path.slice(1) : path.slice(1, slashIdx);
   const rest = slashIdx === -1 ? "" : path.slice(slashIdx);
 
-  const { aliases } = getConfig();
+  const { aliases } = getFilesConfig();
   const value = aliases[name];
   if (value === undefined) {
     throw new Error(`Unknown alias: "@${name}"`);

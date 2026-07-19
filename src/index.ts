@@ -1,6 +1,7 @@
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFilesTools } from "./tools/files/index.js";
+import { registerScheduleTools } from "./tools/schedule/index.js";
 
 function createServer(env: Env): McpServer {
   const server = new McpServer({
@@ -9,6 +10,7 @@ function createServer(env: Env): McpServer {
   });
 
   registerFilesTools(server, env);
+  registerScheduleTools(server, env);
 
   return server;
 }

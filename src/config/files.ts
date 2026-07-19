@@ -3,9 +3,9 @@ import { parse } from "smol-toml";
 // Wrangler `Text` module rule for `**/*.toml`.
 // Future: overridable via an env var pointing to an external file — not
 // implemented yet.
-import LOCATIONS_TOML from "./locations.toml";
+import FILES_TOML from "./files.toml";
 
-export interface LocationsConfig {
+export interface FilesConfig {
   aliases: Record<string, string>;
   patterns: Record<string, string>;
 }
@@ -35,11 +35,11 @@ function expandHosts(
   return expanded;
 }
 
-let cached: LocationsConfig | undefined;
+let cached: FilesConfig | undefined;
 
-export function getConfig(): LocationsConfig {
+export function getFilesConfig(): FilesConfig {
   if (!cached) {
-    const raw = parse(LOCATIONS_TOML) as RawConfig;
+    const raw = parse(FILES_TOML) as RawConfig;
     cached = {
       aliases: expandHosts(raw.aliases ?? {}, raw.hosts ?? {}),
       patterns: raw.patterns ?? {},
