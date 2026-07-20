@@ -92,7 +92,9 @@ export function getDateTime(
 // caller must supply an already zone-local ISO string in that case; no
 // timezone conversion happens here, since that needs a full IANA tz
 // database, which this Worker deliberately doesn't carry.
-function isoToBasic(iso: string): string {
+// Exported for ical/recurrence.ts (EXDATE uses the same ISO→basic
+// conversion as DTSTART/DTEND/DUE).
+export function isoToBasic(iso: string): string {
   const datePart = iso.slice(0, 10).replace(/-/g, "");
   if (iso.length <= 10) return datePart;
 
