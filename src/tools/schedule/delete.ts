@@ -3,7 +3,7 @@ import { CalDAVClient } from "../../clients/caldav/index.js";
 import { ok, err } from "../../utils.js";
 import { IdSchema, OccurrenceSchema } from "./utils/schemas.js";
 import { findEventAcrossCalendars, formatWarnings } from "./utils/find.js";
-import { findMasterEvent } from "./utils/mapping.js";
+import { findMasterEvent, findOccurrenceOverride } from "./utils/mapping.js";
 import { parseCalendar } from "../../ical/parse.js";
 import { findAllComponents } from "../../ical/component.js";
 import { addExdate } from "../../ical/recurrence.js";
@@ -49,13 +49,28 @@ export function registerScheduleDeleteTool(server: McpServer, env: Env): void {
             return err(new Error(`Event ${id} has no calendar-data to update.`));
           }
           const cal = parseCalendar(entry.calendarData);
-          const master = findMasterEvent(findAllComponents(cal, "VEVENT"));
+          const events = findAllComponents(cal, "VEVENT");
+          const master = findMasterEvent(events);
           if (!master) {
             return err(
               new Error(`Event ${id} has no recurring master; cannot skip occurrence ${occurrence}.`),
             );
           }
           addExdate(master, occurrence);
+
+          // If this occurrence was previously edited (nc_schedule_update
+          // detaches an edited occurrence into its own override VEVENT with
+          // a RECURRENCE-ID), the EXDATE above only stops the master's RRULE
+          // from regenerating it — it does nothing to the override itself,
+          // which is a separate resource-level component and stays visible
+          // regardless of EXDATE. Must remove it explicitly or "skip this
+          // occurrence" silently fails for any occurrence that was ever
+          // edited before being deleted.
+          const override = findOccurrenceOverride(events, occurrence);
+          if (override) {
+            cal.components = cal.components.filter((c) => c !== override);
+          }
+
           const ics = stringifyCalendar(cal);
           await client.update(calendarName, "VEVENT", id, ics);
           return ok(

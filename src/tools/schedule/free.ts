@@ -10,7 +10,7 @@ import {
   basicUtcToDate,
   dateToBasicUtc,
 } from "./utils/time.js";
-import { extractEventSummary } from "./utils/mapping.js";
+import { extractEventSummaries } from "./utils/mapping.js";
 
 interface Interval {
   start: Date;
@@ -89,12 +89,13 @@ export function registerScheduleFreeTool(server: McpServer, env: Env): void {
             endUtc,
           );
           for (const entry of entries) {
-            const summary = extractEventSummary(entry);
-            if (!summary || !summary.start || !summary.end) continue;
-            busy.push({
-              start: basicUtcToDate(summary.start),
-              end: basicUtcToDate(summary.end),
-            });
+            for (const summary of extractEventSummaries(entry)) {
+              if (!summary.start || !summary.end) continue;
+              busy.push({
+                start: basicUtcToDate(summary.start),
+                end: basicUtcToDate(summary.end),
+              });
+            }
           }
         }
         busy.sort((a, b) => a.start.getTime() - b.start.getTime());

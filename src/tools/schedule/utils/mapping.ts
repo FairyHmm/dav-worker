@@ -9,7 +9,7 @@ import {
   setDateTime,
   removeProperty,
   nowStamp,
-  findComponent,
+  findAllComponents,
   cloneComponent,
   isoToBasic,
   basicToIso,
@@ -159,12 +159,7 @@ export function detachOccurrence(master: ICalComponent, occurrenceIso: string): 
   return clone;
 }
 
-export function extractEventSummary(entry: ReportEntry): EventSummary | null {
-  if (!entry.calendarData) return null;
-  const cal = parseCalendar(entry.calendarData);
-  const vevent = findComponent(cal, "VEVENT");
-  if (!vevent) return null;
-
+function summarizeVevent(vevent: ICalComponent): EventSummary {
   const recurrenceId = getDateTime(vevent, "RECURRENCE-ID");
 
   return {
@@ -176,4 +171,16 @@ export function extractEventSummary(entry: ReportEntry): EventSummary | null {
     end: getDateTime(vevent, "DTEND")?.raw ?? "",
     occurrence: recurrenceId ? basicToIso(recurrenceId.raw) : undefined,
   };
+}
+
+// A single ReportEntry's calendar-data can contain more than one VEVENT:
+// <c:expand> (report.ts's timeRangeQueryBody) returns a recurring master's
+// matched occurrences as multiple VEVENT blocks inside ONE response's
+// calendar-data, not as separate <d:response> entries per occurrence. Every
+// VEVENT in the blob is a real, distinct occurrence that must be surfaced —
+// callers (list.ts, free.ts) need all of them, not just the first.
+export function extractEventSummaries(entry: ReportEntry): EventSummary[] {
+  if (!entry.calendarData) return [];
+  const cal = parseCalendar(entry.calendarData);
+  return findAllComponents(cal, "VEVENT").map(summarizeVevent);
 }

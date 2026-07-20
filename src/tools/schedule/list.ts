@@ -5,7 +5,7 @@ import { ok, err } from "../../utils.js";
 import { CategorySchema, TimeWindowSchema } from "./utils/schemas.js";
 import { resolveCalendarName, allCalendarNames } from "../../config/calendars.js";
 import { resolveTimeWindow } from "./utils/time.js";
-import { extractEventSummary } from "./utils/mapping.js";
+import { extractEventSummaries } from "./utils/mapping.js";
 import { formatWarnings } from "./utils/find.js";
 import type { EventSummary } from "./utils/mapping.js";
 
@@ -49,8 +49,9 @@ export function registerScheduleListTool(server: McpServer, env: Env): void {
             throw e;
           }
           for (const entry of entries) {
-            const summary = extractEventSummary(entry);
-            if (summary) results.push({ ...summary, calendar: calendarName });
+            for (const summary of extractEventSummaries(entry)) {
+              results.push({ ...summary, calendar: calendarName });
+            }
           }
         }
 
