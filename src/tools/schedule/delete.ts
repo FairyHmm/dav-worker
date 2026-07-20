@@ -1,8 +1,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CalDAVClient } from "../../clients/caldav/index.js";
 import { ok, err } from "../../utils.js";
-import { IdSchema } from "./utils/schemas.js";
-import { findEventAcrossCalendars } from "./utils/find.js";
+import { IdSchema, OccurrenceSchema } from "./utils/schemas.js";
+import { findEventAcrossCalendars, formatWarnings } from "./utils/find.js";
+import { findMasterEvent } from "./utils/mapping.js";
+import { parseCalendar } from "../../ical/parse.js";
+import { findAllComponents } from "../../ical/component.js";
+import { addExdate } from "../../ical/recurrence.js";
+import { stringifyCalendar } from "../../ical/stringify.js";
 
 export function registerScheduleDeleteTool(server: McpServer, env: Env): void {
   server.registerTool(
@@ -13,10 +18,13 @@ export function registerScheduleDeleteTool(server: McpServer, env: Env): void {
         "events linked to it (X-DAV-WORKER-TRAVEL-FOR). Searches all " +
         "configured calendars; no-ops silently if the id doesn't exist " +
         "anywhere (idempotent delete, per SPEC-SCHEDULES.md's status-code " +
-        "contract).",
-      inputSchema: { id: IdSchema },
+        "contract). Omitting `occurrence` deletes the whole series (or a " +
+        "non-recurring event); providing it skips just that one instance " +
+        "of a recurring event (adds an EXDATE to the series — the series " +
+        "and its other instances are untouched).",
+      inputSchema: { id: IdSchema, occurrence: OccurrenceSchema },
     },
-    async ({ id }) => {
+    async ({ id, occurrence }) => {
       try {
         const client = new CalDAVClient(env);
 
@@ -24,11 +32,36 @@ export function registerScheduleDeleteTool(server: McpServer, env: Env): void {
         // against every configured calendar) because travel-buffer cleanup
         // needs to know which single calendar to search for buffers in —
         // buffers always live alongside their parent, per SPEC-SCHEDULES.md.
-        const found = await findEventAcrossCalendars(client, "VEVENT", id);
+        const { found, warnings } = await findEventAcrossCalendars(client, "VEVENT", id);
         if (!found) {
-          return ok(`Deleted event (id: ${id}), if it existed.`);
+          // If any calendar was skipped, this "if it existed" no-op is
+          // exactly the case where a stale slug can quietly hide a real
+          // event that never actually got deleted — surface it loudly
+          // rather than reporting a clean success.
+          return ok(`${formatWarnings(warnings)}Deleted event (id: ${id}), if it existed.`);
         }
-        const { calendarName } = found;
+        const { calendarName, entry } = found;
+
+        if (occurrence !== undefined) {
+          // Skipping one instance is an EXDATE on the master, not a
+          // resource delete — PUT the modified series back.
+          if (!entry.calendarData) {
+            return err(new Error(`Event ${id} has no calendar-data to update.`));
+          }
+          const cal = parseCalendar(entry.calendarData);
+          const master = findMasterEvent(findAllComponents(cal, "VEVENT"));
+          if (!master) {
+            return err(
+              new Error(`Event ${id} has no recurring master; cannot skip occurrence ${occurrence}.`),
+            );
+          }
+          addExdate(master, occurrence);
+          const ics = stringifyCalendar(cal);
+          await client.update(calendarName, "VEVENT", id, ics);
+          return ok(
+            `${formatWarnings(warnings)}Skipped occurrence ${occurrence} of event (id: ${id}) in ${calendarName}.`,
+          );
+        }
 
         const buffers = await client.findTravelBuffersFor(calendarName, id);
         await client.delete(calendarName, "VEVENT", id);
@@ -39,7 +72,7 @@ export function registerScheduleDeleteTool(server: McpServer, env: Env): void {
         const bufferNote = buffers.length
           ? ` and ${buffers.length} travel buffer${buffers.length > 1 ? "s" : ""}`
           : "";
-        return ok(`Deleted event (id: ${id})${bufferNote}.`);
+        return ok(`${formatWarnings(warnings)}Deleted event (id: ${id})${bufferNote}.`);
       } catch (e) {
         return err(e);
       }

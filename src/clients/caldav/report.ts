@@ -1,4 +1,4 @@
-import { xmlParser } from "../webdav/xml.js";
+import { xmlParser, decodeMissedNumericEntities } from "../webdav/xml.js";
 
 export type ComponentType = "VEVENT" | "VTODO";
 
@@ -77,11 +77,25 @@ export function timeRangeQueryBody(
   startUtc: string,
   endUtc: string,
 ): string {
+  // <c:expand> (sabre-dav/Nextcloud extension, not RFC 4791 itself) makes
+  // recurring masters come back as individual occurrence VEVENTs — each
+  // with its own DTSTART/DTEND and a RECURRENCE-ID — instead of one
+  // RRULE-bearing master. Plain time-range filtering only matches whether
+  // the master *overlaps* the window; it doesn't expand occurrences by
+  // itself (SPEC-SCHEDULES.md "Recurring events"). VTODO has no recurrence
+  // story here (tools/tasks/ doesn't exist yet), so expand is VEVENT-only —
+  // no point changing VTODO's calendar-data shape for a feature it doesn't
+  // have.
+  const calendarDataElement =
+    componentType === "VEVENT"
+      ? `<c:calendar-data><c:expand start="${startUtc}" end="${endUtc}"/></c:calendar-data>`
+      : `<c:calendar-data/>`;
+
   return `<?xml version="1.0" encoding="utf-8"?>
 <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
   <d:prop>
     <d:getetag/>
-    <c:calendar-data/>
+    ${calendarDataElement}
   </d:prop>
   <c:filter>
     <c:comp-filter name="VCALENDAR">
@@ -113,7 +127,7 @@ export function parseReportResponses(xml: string): ReportEntry[] {
       href: decodeURIComponent(String(r.href ?? "")),
       etag: merged.getetag ? String(merged.getetag) : null,
       calendarData: merged["calendar-data"]
-        ? String(merged["calendar-data"])
+        ? decodeMissedNumericEntities(String(merged["calendar-data"]))
         : null,
     };
   });

@@ -38,3 +38,21 @@ export function mergedProps(r: any): any {
 export function propOrNull(value: unknown): string | null {
   return value === "" || value == null ? null : String(value);
 }
+
+// fast-xml-parser (4.5.x, at least) doesn't decode numeric character
+// references for control characters like CR/LF/TAB (&#13; &#10; &#9;) —
+// left as literal text instead of the actual character. CalDAV servers
+// rely on exactly those entities to carry calendar-data's real CRLF line
+// endings through XML's line-ending normalization, so an undecoded &#13;
+// corrupts every content line (e.g. "BEGIN:VCALENDAR&#13;" instead of
+// "BEGIN:VCALENDAR\r"), which then corrupts ical/parse.ts's unfolded
+// component names (a VEVENT's BEGIN line's value becomes "VEVENT&#13;",
+// not "VEVENT") — silently breaking every findComponent("VEVENT") lookup
+// downstream. Standard entities (&amp; &lt; etc.) ARE handled fine by
+// fast-xml-parser; only the numeric-reference path for these three is
+// affected, so that's all this covers.
+export function decodeMissedNumericEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}

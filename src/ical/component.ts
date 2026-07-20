@@ -24,6 +24,33 @@ export function findComponent(
   return undefined;
 }
 
+// All direct sub-components with the given name — e.g. every VEVENT in a
+// VCALENDAR resource that holds a recurring master plus one or more
+// detached RECURRENCE-ID overrides (SPEC-SCHEDULES.md "Recurring events").
+// Unlike findComponent this doesn't recurse past `root`'s direct children:
+// VEVENT/VTODO/VTIMEZONE are always siblings directly under VCALENDAR per
+// RFC 5545's grammar, never nested inside each other.
+export function findAllComponents(root: ICalComponent, name: string): ICalComponent[] {
+  return root.components.filter((c) => c.name === name);
+}
+
+// Deep copy of a component and its properties/sub-components. Used by
+// occurrence-targeted update (SPEC-SCHEDULES.md "Recurring events") to
+// clone a recurring master into a standalone RECURRENCE-ID override without
+// mutating the master in place.
+export function cloneComponent(component: ICalComponent): ICalComponent {
+  return {
+    name: component.name,
+    properties: Object.fromEntries(
+      Object.entries(component.properties).map(([key, props]) => [
+        key,
+        props.map((p) => ({ value: p.value, params: { ...p.params } })),
+      ]),
+    ),
+    components: component.components.map(cloneComponent),
+  };
+}
+
 export function getText(component: ICalComponent, name: string): string | undefined {
   const prop = component.properties[name]?.[0];
   return prop ? unescapeText(prop.value) : undefined;
@@ -103,6 +130,22 @@ export function isoToBasic(iso: string): string {
   const timePart = (utc ? rest.slice(0, -1) : rest)
     .replace(/\.\d+$/, "") // drop fractional seconds
     .replace(/:/g, "");
+  return `${datePart}T${timePart}${utc ? "Z" : ""}`;
+}
+
+// Inverse of isoToBasic — RFC 5545 basic ("20260722T090000Z") back to ISO
+// ("2026-07-22T09:00:00Z"). Exported for mapping.ts, which surfaces
+// RECURRENCE-ID values back to callers as an `occurrence` field in the same
+// ISO shape occurrence-targeted update/delete will expect as input —
+// keeping the wire format the caller sees consistently ISO end-to-end.
+export function basicToIso(basic: string): string {
+  const datePart = `${basic.slice(0, 4)}-${basic.slice(4, 6)}-${basic.slice(6, 8)}`;
+  if (basic.length <= 8) return datePart;
+
+  const timeRaw = basic.slice(9); // skip the "T" at index 8
+  const utc = timeRaw.endsWith("Z");
+  const t = utc ? timeRaw.slice(0, -1) : timeRaw;
+  const timePart = `${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}`;
   return `${datePart}T${timePart}${utc ? "Z" : ""}`;
 }
 

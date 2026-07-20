@@ -1,3 +1,14 @@
+export class NextcloudHttpError extends Error {
+  constructor(
+    method: string,
+    path: string,
+    public readonly status: number,
+  ) {
+    super(`Nextcloud ${method} ${path} → ${status}`);
+    this.name = "NextcloudHttpError";
+  }
+}
+
 export class NextcloudBase {
   protected host: string;
   protected username: string;
@@ -39,7 +50,7 @@ export class NextcloudBase {
 
     const expected = options.expectStatus ?? [200, 201, 204, 207];
     if (!expected.includes(res.status)) {
-      throw new Error(`Nextcloud ${method} ${path} → ${res.status}`);
+      throw new NextcloudHttpError(method, path, res.status);
     }
     return res;
   }

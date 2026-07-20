@@ -53,6 +53,13 @@ export const IdSchema = z
     "The event's CalDAV UID, as returned by nc_schedule_list/nc_schedule_create.",
   );
 
+export const OccurrenceSchema = DateTimeSchema.optional().describe(
+  "For recurring events: targets one instance instead of the whole series, " +
+    "identified by its original ISO start (the `occurrence` field returned " +
+    "by nc_schedule_list for expanded recurring events). Omit to act on " +
+    "the whole series.",
+);
+
 export const TimeWindowSchema = z
   .union([
     z.object({ from: z.number(), to: z.number() }),

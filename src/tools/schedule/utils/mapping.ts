@@ -7,9 +7,12 @@ import {
   setText,
   getDateTime,
   setDateTime,
+  removeProperty,
   nowStamp,
   findComponent,
+  cloneComponent,
   isoToBasic,
+  basicToIso,
 } from "../../../ical/component.js";
 import { setRRule } from "../../../ical/recurrence.js";
 
@@ -34,6 +37,12 @@ export interface EventSummary {
   location?: string;
   start: string;
   end: string;
+  // Present when this summary came from an <C:expand>-ed occurrence of a
+  // recurring event (RECURRENCE-ID on the VEVENT) rather than a
+  // non-recurring event or an un-expanded master. Same ISO shape that
+  // occurrence-targeted update/delete will take as input, so callers can
+  // round-trip a value straight from a list result into those calls.
+  occurrence?: string;
 }
 
 export function buildEventComponent(
@@ -101,11 +110,62 @@ export function buildTravelBufferComponent(
   return event;
 }
 
+// Occurrence-targeting helpers (SPEC-SCHEDULES.md "Recurring events").
+// A VEVENT resource can hold a recurring master (no RECURRENCE-ID) plus
+// zero or more detached override VEVENTs (RECURRENCE-ID set), all sharing
+// one UID in one .ics resource. These distinguish the two and build a new
+// override from the master.
+
+export function findMasterEvent(events: ICalComponent[]): ICalComponent | undefined {
+  return events.find((e) => !e.properties["RECURRENCE-ID"]);
+}
+
+export function findOccurrenceOverride(
+  events: ICalComponent[],
+  occurrenceIso: string,
+): ICalComponent | undefined {
+  const basic = isoToBasic(occurrenceIso);
+  return events.find((e) => e.properties["RECURRENCE-ID"]?.[0]?.value === basic);
+}
+
+// Clones a recurring master into a standalone override VEVENT for one
+// instance: same UID, RECURRENCE-ID set to the targeted occurrence, RRULE/
+// EXDATE stripped (an override is a single instance, not itself recurring),
+// DTSTART/DTEND shifted to the occurrence's start while preserving the
+// master's original duration. Caller applies field edits on top via
+// applyEventFields() afterward — this only handles the detach itself.
+// Per SPEC-SCHEDULES.md's idempotence contract, callers must check
+// findOccurrenceOverride() first and only fall back to this when no
+// override exists yet for that occurrence.
+export function detachOccurrence(master: ICalComponent, occurrenceIso: string): ICalComponent {
+  const clone = cloneComponent(master);
+  removeProperty(clone, "RRULE");
+  removeProperty(clone, "EXDATE");
+
+  const masterStart = getDateTime(master, "DTSTART");
+  const masterEnd = getDateTime(master, "DTEND");
+  const dtOpts = { allDay: masterStart?.isDate, tzid: masterStart?.tzid };
+
+  setDateTime(clone, "RECURRENCE-ID", occurrenceIso, dtOpts);
+  setDateTime(clone, "DTSTART", occurrenceIso, dtOpts);
+
+  if (masterStart && masterEnd) {
+    const durationMs =
+      new Date(basicToIso(masterEnd.raw)).getTime() - new Date(basicToIso(masterStart.raw)).getTime();
+    const occurrenceEndIso = new Date(new Date(occurrenceIso).getTime() + durationMs).toISOString();
+    setDateTime(clone, "DTEND", occurrenceEndIso, { allDay: masterEnd.isDate, tzid: masterEnd.tzid });
+  }
+
+  return clone;
+}
+
 export function extractEventSummary(entry: ReportEntry): EventSummary | null {
   if (!entry.calendarData) return null;
   const cal = parseCalendar(entry.calendarData);
   const vevent = findComponent(cal, "VEVENT");
   if (!vevent) return null;
+
+  const recurrenceId = getDateTime(vevent, "RECURRENCE-ID");
 
   return {
     uid: getText(vevent, "UID") ?? "",
@@ -114,5 +174,6 @@ export function extractEventSummary(entry: ReportEntry): EventSummary | null {
     location: getText(vevent, "LOCATION"),
     start: getDateTime(vevent, "DTSTART")?.raw ?? "",
     end: getDateTime(vevent, "DTEND")?.raw ?? "",
+    occurrence: recurrenceId ? basicToIso(recurrenceId.raw) : undefined,
   };
 }
