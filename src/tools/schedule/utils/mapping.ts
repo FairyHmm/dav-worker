@@ -9,7 +9,9 @@ import {
   setDateTime,
   nowStamp,
   findComponent,
+  isoToBasic,
 } from "../../../ical/component.js";
+import { setRRule } from "../../../ical/recurrence.js";
 
 // Maps dav-worker's own request/response field names (title, start, end,
 // description, location) onto RFC 5545 VEVENT properties, via ical/'s
@@ -60,6 +62,24 @@ export function applyEventFields(event: ICalComponent, fields: EventFields): voi
   const stamp = nowStamp();
   event.properties["DTSTAMP"] = [{ value: stamp, params: {} }];
   event.properties["LAST-MODIFIED"] = [{ value: stamp, params: {} }];
+}
+
+// Friendlier daily/weekly schema (SPEC-SCHEDULES.md "Recurring events"),
+// not raw RRULE input. `until`, if given, is an ISO date/date-time like the
+// rest of dav-worker's schema — converted to RFC 5545 basic format here so
+// callers never have to think in RRULE's wire format.
+export interface RecurrenceFields {
+  freq: "daily" | "weekly";
+  interval?: number;
+  until?: string;
+}
+
+export function applyRecurrence(event: ICalComponent, recurrence: RecurrenceFields): void {
+  setRRule(event, {
+    freq: recurrence.freq === "daily" ? "DAILY" : "WEEKLY",
+    interval: recurrence.interval,
+    until: recurrence.until !== undefined ? isoToBasic(recurrence.until) : undefined,
+  });
 }
 
 // Builds a travel-buffer VEVENT (SPEC-SCHEDULES.md): a plain event carrying

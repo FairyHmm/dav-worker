@@ -8,9 +8,10 @@ import {
   LocationFieldSchema,
   DateTimeSchema,
   TravelSchema,
+  RecurrenceSchema,
 } from "./utils/schemas.js";
 import { resolveCalendarName } from "../../config/calendars.js";
-import { buildEventComponent, buildTravelBufferComponent } from "./utils/mapping.js";
+import { buildEventComponent, buildTravelBufferComponent, applyRecurrence } from "./utils/mapping.js";
 import { parseDurationMs, shiftIso } from "./utils/time.js";
 import { wrapInCalendar } from "../../ical/component.js";
 import { stringifyCalendar } from "../../ical/stringify.js";
@@ -22,7 +23,8 @@ export function registerScheduleCreateTool(server: McpServer, env: Env): void {
       description:
         "Create a calendar event. Optionally pass `travel` to also create " +
         "separate before/after travel-buffer events in the same calendar, " +
-        "linked to this event via X-DAV-WORKER-TRAVEL-FOR.",
+        "linked to this event via X-DAV-WORKER-TRAVEL-FOR. Optionally pass " +
+        "`recurrence` for a daily/weekly repeating event.",
       inputSchema: {
         title: TitleSchema,
         start: DateTimeSchema,
@@ -31,13 +33,15 @@ export function registerScheduleCreateTool(server: McpServer, env: Env): void {
         description: DescriptionSchema,
         location: LocationFieldSchema,
         travel: TravelSchema,
+        recurrence: RecurrenceSchema,
       },
     },
-    async ({ title, start, end, category, description, location, travel }) => {
+    async ({ title, start, end, category, description, location, travel, recurrence }) => {
       try {
         const calendarName = resolveCalendarName(category);
         const uid = crypto.randomUUID();
         const event = buildEventComponent(uid, { title, start, end, description, location });
+        if (recurrence) applyRecurrence(event, recurrence);
         const ics = stringifyCalendar(wrapInCalendar(event));
 
         const client = new CalDAVClient(env);

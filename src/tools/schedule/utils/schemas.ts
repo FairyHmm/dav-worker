@@ -31,6 +31,22 @@ export const TravelSchema = z
       "into the event itself.",
   );
 
+export const RecurrenceSchema = z
+  .object({
+    freq: z.enum(["daily", "weekly"]).describe("Recurrence frequency."),
+    interval: z
+      .number()
+      .optional()
+      .describe("Repeat every N periods (e.g. 2 = every other week). Default 1."),
+    until: DateTimeSchema.optional().describe("Last possible occurrence date/time, inclusive."),
+  })
+  .optional()
+  .describe(
+    "Optional recurrence, assembled into an RRULE server-side. Friendlier " +
+      "schema, not raw RRULE input — only daily/weekly with an interval " +
+      "and/or end date is supported in v1, no BYDAY patterns or COUNT.",
+  );
+
 export const IdSchema = z
   .string()
   .describe(
