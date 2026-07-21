@@ -45,4 +45,21 @@
    * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
    */
   // "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+  /**
+   * KV Namespaces
+   * https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
+   *
+   * Placeholder ids — run `wrangler kv namespace create <NAME>` for each and
+   * paste the real id here before first deploy. OAUTH_KV is the binding name
+   * `workers-oauth-provider` expects by convention (Layer 1 token/consent
+   * storage); TOKEN_STORE backs `auth/upstream`'s TokenStore (Layer 2 —
+   * Credential per session); SESSION_CONFIG_STORE backs SessionConfigStore
+   * (per-user locations/calendars config paths). See SPEC-MONOREPO.md's
+   * "Auth — Two Layers" and "Session Config" sections.
+   */
+  "kv_namespaces": [
+    { "binding": "OAUTH_KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" },
+    { "binding": "TOKEN_STORE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" },
+    { "binding": "SESSION_CONFIG_STORE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" },
+  ],
 }
