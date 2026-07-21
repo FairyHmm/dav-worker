@@ -3,12 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
+    "deploy": "wrangler deploy -c src/app/worker/wrangler.jsonc",
+    "dev": "wrangler dev -c src/app/worker/wrangler.jsonc",
     "format": "oxfmt --write .",
     "lint:fix": "oxlint --fix",
-    "start": "wrangler dev",
-    "cf-typegen": "wrangler types",
+    "start": "wrangler dev -c src/app/worker/wrangler.jsonc",
+    "cf-typegen": "wrangler types -c src/app/worker/wrangler.jsonc src/app/worker/worker-configuration.d.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
