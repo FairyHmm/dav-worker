@@ -61,6 +61,56 @@ importers:
         specifier: ^4.110.0
         version: 4.110.0
 
+  src/packages/auth/upstream: {}
+
+  src/packages/calendar/contracts: {}
+
+  src/packages/calendar/ical: {}
+
+  src/packages/calendar/tools:
+    dependencies:
+      '@dav-worker/calendar-contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@dav-worker/calendar-ical':
+        specifier: workspace:*
+        version: link:../ical
+
+  src/packages/clients/webdav: {}
+
+  src/packages/files/contracts: {}
+
+  src/packages/files/locations: {}
+
+  src/packages/files/parser: {}
+
+  src/packages/files/tools:
+    dependencies:
+      '@dav-worker/files-contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@dav-worker/files-locations':
+        specifier: workspace:*
+        version: link:../locations
+      '@dav-worker/files-parser':
+        specifier: workspace:*
+        version: link:../parser
+
+  src/packages/storage/nextcloud:
+    dependencies:
+      '@dav-worker/auth-upstream':
+        specifier: workspace:*
+        version: link:../../auth/upstream
+      '@dav-worker/calendar-contracts':
+        specifier: workspace:*
+        version: link:../../calendar/contracts
+      '@dav-worker/clients-webdav':
+        specifier: workspace:*
+        version: link:../../clients/webdav
+      '@dav-worker/files-contracts':
+        specifier: workspace:*
+        version: link:../../files/contracts
+
 packages:
 
   '@babel/code-frame@8.0.0':

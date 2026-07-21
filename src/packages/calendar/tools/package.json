@@ -1,0 +1,12 @@
+{
+  "name": "@dav-worker/calendar-tools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "@dav-worker/calendar-contracts": "workspace:*",
+    "@dav-worker/calendar-ical": "workspace:*"
+  }
+}

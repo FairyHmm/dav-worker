@@ -1,0 +1,14 @@
+{
+  "name": "@dav-worker/storage-nextcloud",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "@dav-worker/clients-webdav": "workspace:*",
+    "@dav-worker/auth-upstream": "workspace:*",
+    "@dav-worker/calendar-contracts": "workspace:*",
+    "@dav-worker/files-contracts": "workspace:*"
+  }
+}
