@@ -75,6 +75,9 @@ importers:
       '@dav-worker/calendar-ical':
         specifier: workspace:*
         version: link:../ical
+      '@dav-worker/clients-webdav':
+        specifier: workspace:*
+        version: link:../../clients/webdav
 
   src/packages/clients/webdav: {}
 

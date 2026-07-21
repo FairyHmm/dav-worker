@@ -7,6 +7,7 @@
   "types": "./index.ts",
   "dependencies": {
     "@dav-worker/calendar-contracts": "workspace:*",
-    "@dav-worker/calendar-ical": "workspace:*"
+    "@dav-worker/calendar-ical": "workspace:*",
+    "@dav-worker/clients-webdav": "workspace:*"
   }
 }
