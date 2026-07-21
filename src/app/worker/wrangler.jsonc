@@ -49,17 +49,14 @@
    * KV Namespaces
    * https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
    *
-   * Placeholder ids — run `wrangler kv namespace create <NAME>` for each and
-   * paste the real id here before first deploy. OAUTH_KV is the binding name
-   * `workers-oauth-provider` expects by convention (Layer 1 token/consent
-   * storage); TOKEN_STORE backs `auth/upstream`'s TokenStore (Layer 2 —
-   * Credential per session); SESSION_CONFIG_STORE backs SessionConfigStore
-   * (per-user locations/calendars config paths). See SPEC-MONOREPO.md's
-   * "Auth — Two Layers" and "Session Config" sections.
+   * Placeholder id — run `wrangler kv namespace create OAUTH_KV` and paste
+   * the real id here before first deploy. OAUTH_KV is the binding name
+   * `workers-oauth-provider` expects by convention: it stores grants/tokens
+   * and, crucially, each grant's encrypted `props` — which is where the
+   * Nextcloud `Credential` + locations/calendars config paths live (see
+   * `index.ts`'s `SessionProps`). There's deliberately no separate
+   * TokenStore/SessionConfigStore KV namespace: `props` already is a
+   * session-keyed store, so a second one would just be duplicated state.
    */
-  "kv_namespaces": [
-    { "binding": "OAUTH_KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" },
-    { "binding": "TOKEN_STORE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" },
-    { "binding": "SESSION_CONFIG_STORE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" },
-  ],
+  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
 }
