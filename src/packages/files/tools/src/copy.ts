@@ -28,8 +28,8 @@ export function registerCopyTool(server: McpServer, deps: FileToolsDeps): void {
     },
     async ({ src: srcArg, dst: dstArg, srcLocation, dstLocation, force }) => {
       try {
-        const src = srcLocation ? resolveLocation(srcLocation) : (srcArg ?? "");
-        const dst = dstLocation ? resolveLocation(dstLocation) : (dstArg ?? "");
+        const src = srcLocation ? resolveLocation(deps.config, srcLocation) : (srcArg ?? "");
+        const dst = dstLocation ? resolveLocation(deps.config, dstLocation) : (dstArg ?? "");
         const client = deps.storage;
         const result = await client.copy(src, dst, force);
 

@@ -31,7 +31,7 @@ export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
     },
     async ({ path: pathArg, location, block, from, to }) => {
       try {
-        const path = location ? resolveLocation(location) : (pathArg ?? "");
+        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
         const client = deps.storage;
         const { content } = await client.read(path);
 

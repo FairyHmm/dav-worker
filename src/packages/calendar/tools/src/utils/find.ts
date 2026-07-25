@@ -1,5 +1,5 @@
 import type { CalendarStorage, ComponentType, ReportEntry } from "@dav-worker/calendar-contracts";
-import { allCalendarNames } from "../calendars.js";
+import { allCalendarNames, type CalendarConfig } from "../calendars.js";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
 
 export interface FindAcrossCalendarsResult {
@@ -41,11 +41,12 @@ function calendarWarning(calendarName: string): string {
 // to something the contract actually specifies.
 export async function findEventAcrossCalendars(
   storage: CalendarStorage,
+  config: CalendarConfig,
   componentType: ComponentType,
   uid: string,
 ): Promise<FindAcrossCalendarsResult> {
   const warnings: string[] = [];
-  for (const calendarName of allCalendarNames()) {
+  for (const calendarName of allCalendarNames(config)) {
     try {
       const entry = await storage.findByUid(calendarName, componentType, uid);
       if (entry) return { found: { calendarName, entry }, warnings };

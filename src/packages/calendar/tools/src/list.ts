@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CalendarToolsDeps } from "./deps.js";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
 import { ok, err } from "./utils.js";
-import { CategorySchema, TimeWindowSchema } from "./utils/schemas.js";
+import { categorySchema, TimeWindowSchema } from "./utils/schemas.js";
 import { resolveCalendarName, allCalendarNames } from "./calendars.js";
 import { resolveTimeWindow } from "./utils/time.js";
 import { extractEventSummaries } from "./utils/mapping.js";
@@ -17,15 +17,15 @@ export function registerScheduleListTool(server: McpServer, deps: CalendarToolsD
         "List calendar events in a time window. Omit `category` to search all " +
         "configured calendars. Does not yet merge in related tasks (tools/tasks " +
         "isn't built yet) — that's a follow-up once nc_task_* exists.",
-      inputSchema: { time: TimeWindowSchema, category: CategorySchema.optional() },
+      inputSchema: { time: TimeWindowSchema, category: categorySchema(deps.config).optional() },
     },
     async ({ time, category }) => {
       try {
         const { startUtc, endUtc } = resolveTimeWindow(time);
         const client = deps.storage;
         const calendarNames = category
-          ? [resolveCalendarName(category)]
-          : allCalendarNames();
+          ? [resolveCalendarName(deps.config, category)]
+          : allCalendarNames(deps.config);
 
         const results: Array<EventSummary & { calendar: string }> = [];
         const warnings: string[] = [];

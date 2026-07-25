@@ -7,6 +7,7 @@
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "^0.0.5",
     "@dav-worker/calendar-tools": "workspace:*",
+    "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",

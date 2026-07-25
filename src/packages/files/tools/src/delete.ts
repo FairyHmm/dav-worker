@@ -16,7 +16,7 @@ export function registerDeleteTool(server: McpServer, deps: FileToolsDeps): void
     },
     async ({ path: pathArg, location }) => {
       try {
-        const path = location ? resolveLocation(location) : (pathArg ?? "");
+        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
         const client = deps.storage;
         await client.delete(path);
         return ok(`Deleted: ${path}`);

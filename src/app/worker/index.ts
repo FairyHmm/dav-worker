@@ -3,7 +3,8 @@ import type { OAuthProviderOptions } from "@cloudflare/workers-oauth-provider";
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
-import { registerCalendarTools } from "@dav-worker/calendar-tools";
+import { registerCalendarTools, parseCalendarConfig } from "@dav-worker/calendar-tools";
+import { parseFilesConfig } from "@dav-worker/files-locations";
 import {
   createNextcloudWebDAVStorage,
   createNextcloudCalDAVStorage,
@@ -25,20 +26,31 @@ export interface SessionProps {
   };
 }
 
-function createServer(props: SessionProps): McpServer {
+// TODO-MONOREPO 9e: resolves props.configs.{locations,calendars} at their
+// session paths via the same NextcloudWebDAVStorage used for file tools
+// (a config path is just another vault file) instead of the previous
+// build-time-bundled files.toml/calendars.toml. Called once per request —
+// createServer runs fresh per request already, so this doubles as the
+// "per-request cache" SPEC-MONOREPO.md's Session Config section asks for;
+// no separate cache needed on top of that.
+async function createServer(props: SessionProps): Promise<McpServer> {
   const server = new McpServer({
     name: "dav-worker",
     version: "0.1.0",
   });
 
-  // Not yet consuming props.configs.{locations,calendars} — resolving
-  // locations.toml/calendars.toml at these session paths instead of the
-  // build-time-bundled config is TODO-MONOREPO's 9e, not this step.
   const fileStorage = createNextcloudWebDAVStorage(props.credential);
   const calendarStorage = createNextcloudCalDAVStorage(props.credential);
 
-  registerFileTools(server, { storage: fileStorage });
-  registerCalendarTools(server, { storage: calendarStorage });
+  const [locationsRaw, calendarsRaw] = await Promise.all([
+    fileStorage.read(props.configs.locations),
+    fileStorage.read(props.configs.calendars),
+  ]);
+  const filesConfig = parseFilesConfig(locationsRaw.content);
+  const calendarConfig = parseCalendarConfig(calendarsRaw.content);
+
+  registerFileTools(server, { storage: fileStorage, config: filesConfig });
+  registerCalendarTools(server, { storage: calendarStorage, config: calendarConfig });
 
   return server;
 }
@@ -50,9 +62,9 @@ function createServer(props: SessionProps): McpServer {
 // type error. `any` at this one boundary avoids fighting that duplication;
 // everything inside `fetch` is cast back to the real `Env`/`Request` types.
 const apiHandler = {
-  fetch(request: any, env: any, ctx: any): Promise<Response> {
+  async fetch(request: any, env: any, ctx: any): Promise<Response> {
     const props = (ctx as ExecutionContext & { props: SessionProps }).props;
-    const server = createServer(props);
+    const server = await createServer(props);
     return createMcpHandler(server)(request as Request, env as Env, ctx as ExecutionContext);
   },
 };

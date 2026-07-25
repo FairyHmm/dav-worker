@@ -69,6 +69,9 @@ importers:
       '@dav-worker/calendar-tools':
         specifier: workspace:*
         version: link:../../packages/calendar/tools
+      '@dav-worker/files-locations':
+        specifier: workspace:*
+        version: link:../../packages/files/locations
       '@dav-worker/files-tools':
         specifier: workspace:*
         version: link:../../packages/files/tools

@@ -18,7 +18,7 @@ export function registerOutlineTool(server: McpServer, deps: FileToolsDeps): voi
     },
     async ({ path: pathArg, location }) => {
       try {
-        const path = location ? resolveLocation(location) : (pathArg ?? "");
+        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
         const client = deps.storage;
         const { content } = await client.read(path);
         const tree = outline(content);

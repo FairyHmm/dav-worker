@@ -16,7 +16,7 @@ export function registerStatTool(server: McpServer, deps: FileToolsDeps): void {
     },
     async ({ path: pathArg, location }) => {
       try {
-        const path = location ? resolveLocation(location) : (pathArg ?? "");
+        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
         const client = deps.storage;
         const meta = await client.stat(path);
         return ok(JSON.stringify(meta, null, 2));

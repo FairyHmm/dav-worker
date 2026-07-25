@@ -44,7 +44,7 @@ export function registerScheduleUpdateTool(server: McpServer, deps: CalendarTool
     async ({ id, occurrence, title, start, end, description, location }) => {
       try {
         const client = deps.storage;
-        const { found, warnings } = await findEventAcrossCalendars(client, "VEVENT", id);
+        const { found, warnings } = await findEventAcrossCalendars(client, deps.config, "VEVENT", id);
         if (!found) {
           return err(new Error(`${formatWarnings(warnings)}No event found with id: ${id}`));
         }

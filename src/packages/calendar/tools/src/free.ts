@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CalendarToolsDeps } from "./deps.js";
 import { ok, err } from "./utils.js";
 import { z } from "zod";
-import { CategorySchema, TimeWindowSchema } from "./utils/schemas.js";
+import { categorySchema, TimeWindowSchema } from "./utils/schemas.js";
 import { resolveCalendarName, allCalendarNames } from "./calendars.js";
 import {
   resolveTimeWindow,
@@ -65,7 +65,7 @@ export function registerScheduleFreeTool(server: McpServer, deps: CalendarToolsD
       inputSchema: {
         duration: z.string().describe("Minimum slot length, e.g. '1h', '30m'."),
         between: TimeWindowSchema,
-        category: CategorySchema.optional(),
+        category: categorySchema(deps.config).optional(),
       },
     },
     async ({ duration, between, category }) => {
@@ -77,8 +77,8 @@ export function registerScheduleFreeTool(server: McpServer, deps: CalendarToolsD
 
         const client = deps.storage;
         const calendarNames = category
-          ? [resolveCalendarName(category)]
-          : allCalendarNames();
+          ? [resolveCalendarName(deps.config, category)]
+          : allCalendarNames(deps.config);
 
         const busy: Interval[] = [];
         for (const calendarName of calendarNames) {

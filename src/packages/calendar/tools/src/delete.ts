@@ -29,7 +29,7 @@ export function registerScheduleDeleteTool(server: McpServer, deps: CalendarTool
         // against every configured calendar) because travel-buffer cleanup
         // needs to know which single calendar to search for buffers in —
         // buffers always live alongside their parent, per SPEC-SCHEDULES.md.
-        const { found, warnings } = await findEventAcrossCalendars(client, "VEVENT", id);
+        const { found, warnings } = await findEventAcrossCalendars(client, deps.config, "VEVENT", id);
         if (!found) {
           // If any calendar was skipped, this "if it existed" no-op is
           // exactly the case where a stale slug can quietly hide a real

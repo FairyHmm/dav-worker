@@ -20,7 +20,7 @@ export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
     },
     async ({ path: pathArg, location, depth }) => {
       try {
-        const path = location ? resolveLocation(location) : (pathArg ?? "");
+        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
         const client = deps.storage;
         const entries = await client.list(path, depth);
 

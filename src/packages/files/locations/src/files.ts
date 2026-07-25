@@ -1,10 +1,11 @@
 import { parse } from "smol-toml";
-// Config file (see Docs/SPEC-LOCATIONS.md), loaded as raw text via the
-// Wrangler `Text` module rule for `**/*.toml`.
-// Future: overridable via an env var pointing to an external file — not
-// implemented yet.
-import FILES_TOML from "./files.toml";
 
+// Config shape (see Docs/SPEC-LOCATIONS.md). No longer bundled at build
+// time (TODO-MONOREPO 9e) — the raw TOML is fetched per-session from the
+// user's configured Nextcloud path (SPEC-MONOREPO.md's Session Config) and
+// parsed here into this shape. No module-level cache: `createServer`
+// resolves this once per request and passes the result down via
+// FileToolsDeps.config, which is the "per-request cache" the spec asks for.
 export interface FilesConfig {
   aliases: Record<string, string>;
   patterns: Record<string, string>;
@@ -35,15 +36,10 @@ function expandHosts(
   return expanded;
 }
 
-let cached: FilesConfig | undefined;
-
-export function getFilesConfig(): FilesConfig {
-  if (!cached) {
-    const raw = parse(FILES_TOML) as RawConfig;
-    cached = {
-      aliases: expandHosts(raw.aliases ?? {}, raw.hosts ?? {}),
-      patterns: raw.patterns ?? {},
-    };
-  }
-  return cached;
+export function parseFilesConfig(raw: string): FilesConfig {
+  const rawConfig = parse(raw) as RawConfig;
+  return {
+    aliases: expandHosts(rawConfig.aliases ?? {}, rawConfig.hosts ?? {}),
+    patterns: rawConfig.patterns ?? {},
+  };
 }

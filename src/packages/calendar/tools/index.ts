@@ -7,6 +7,10 @@ import { registerScheduleDeleteTool } from "./src/delete.js";
 import { registerScheduleFreeTool } from "./src/free.js";
 
 export type { CalendarToolsDeps } from "./src/deps.js";
+// TODO-MONOREPO 9e: config parsing exposed publicly so app/worker (and
+// eventually app/local) can fetch the session's calendars.toml at runtime
+// and hand the parsed result into CalendarToolsDeps.config.
+export { parseCalendarConfig, type CalendarConfig } from "./src/calendars.js";
 
 // Public entry point for this package (SPEC-MONOREPO.md A.5): takes only
 // CalendarToolsDeps (a CalendarStorage implementation), never a platform

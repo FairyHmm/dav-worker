@@ -1,4 +1,4 @@
-import { getFilesConfig } from "./files.js";
+import type { FilesConfig } from "./files.js";
 import { splitSegments, unescape, wildcardIndex } from "./path-segments.js";
 
 // What a pattern's wildcard captured from the input, if it had one.
@@ -56,8 +56,8 @@ function matchOne(patternKey: string, inputSegments: string[]): MatchAttempt {
 // Literal patterns (no `*`) always beat wildcard patterns for the same
 // input shape. Among multiple matches of the same kind, the last one
 // defined in the TOML wins.
-export function findMatchingPattern(inputSegments: string[]): PatternMatch {
-  const { patterns } = getFilesConfig();
+export function findMatchingPattern(config: FilesConfig, inputSegments: string[]): PatternMatch {
+  const { patterns } = config;
 
   let literal: PatternMatch | undefined;
   let wildcard: PatternMatch | undefined;
@@ -96,7 +96,7 @@ export function findMatchingPattern(inputSegments: string[]): PatternMatch {
 //     `dav-worker/spec` (wildcard capture "dav-worker") and a hardcoded
 //     literal pattern like `"dav-worker/code" = "dav-worker/Code/..."`.
 //   - Otherwise: prepend the implicit `@projects` root.
-export function applyPattern(match: PatternMatch): string {
+export function applyPattern(config: FilesConfig, match: PatternMatch): string {
   const templateSegments = splitSegments(match.replacement);
   const wildcardSegIdx = templateSegments.findIndex(
     (seg) => wildcardIndex(seg) !== -1,
@@ -116,7 +116,7 @@ export function applyPattern(match: PatternMatch): string {
     return filledSegments.join("/");
   }
 
-  const { aliases } = getFilesConfig();
+  const { aliases } = config;
   if (aliases[first] !== undefined) {
     return [`@${first}`, ...filledSegments.slice(1)].join("/");
   }

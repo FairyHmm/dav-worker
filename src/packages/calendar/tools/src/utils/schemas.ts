@@ -1,9 +1,15 @@
 import { z } from "zod";
-import { allCategories } from "../calendars.js";
+import { allCategories, type CalendarConfig } from "../calendars.js";
 
-export const CategorySchema = z
-  .string()
-  .describe(`Calendar category. One of: ${allCategories().join(", ")}.`);
+// A function, not a module-level constant (TODO-MONOREPO 9e): the category
+// list used to come from a build-time-bundled calendars.toml, so this
+// schema could be built once at module load. Categories are now per-session
+// (fetched at request time — see createServer), so each tool builds its
+// own copy of this schema from deps.config when it registers, same request
+// scope as everything else touching CalendarConfig.
+export function categorySchema(config: CalendarConfig) {
+  return z.string().describe(`Calendar category. One of: ${allCategories(config).join(", ")}.`);
+}
 
 export const TitleSchema = z.string().describe("Event title.");
 

@@ -47,7 +47,7 @@ export function registerWriteTool(server: McpServer, deps: FileToolsDeps): void 
       to,
     }) => {
       try {
-        const path = location ? resolveLocation(location) : (pathArg ?? "");
+        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
         const client = deps.storage;
         const target = resolveTarget({ block, scope, from, to });
 

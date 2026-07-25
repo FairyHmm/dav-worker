@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CalendarToolsDeps } from "./deps.js";
 import { ok, err } from "./utils.js";
 import {
-  CategorySchema,
+  categorySchema,
   TitleSchema,
   DescriptionSchema,
   LocationFieldSchema,
@@ -28,7 +28,7 @@ export function registerScheduleCreateTool(server: McpServer, deps: CalendarTool
         title: TitleSchema,
         start: DateTimeSchema,
         end: DateTimeSchema,
-        category: CategorySchema,
+        category: categorySchema(deps.config),
         description: DescriptionSchema,
         location: LocationFieldSchema,
         travel: TravelSchema,
@@ -37,7 +37,7 @@ export function registerScheduleCreateTool(server: McpServer, deps: CalendarTool
     },
     async ({ title, start, end, category, description, location, travel, recurrence }) => {
       try {
-        const calendarName = resolveCalendarName(category);
+        const calendarName = resolveCalendarName(deps.config, category);
         const uid = crypto.randomUUID();
         const event = buildEventComponent(uid, { title, start, end, description, location });
         if (recurrence) applyRecurrence(event, recurrence);
