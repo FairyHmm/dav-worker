@@ -1,0 +1,15 @@
+# Minimal default used only when LOCATIONS_CONFIG_PATH is unset for local
+# dev. See src/packages/files/locations/src/files.toml for the real config
+# shape reference — this is a deliberately smaller standalone copy so this
+# fixture never silently drifts if the real one changes.
+
+[aliases]
+vault = "/Obsidian"
+projects = "@vault/Projects"
+
+[hosts]
+"@projects/OSS" = ["dav-worker"]
+
+[patterns]
+"*/spec" = "*/Docs/SPEC.md"
+"*/code" = "*/Code"

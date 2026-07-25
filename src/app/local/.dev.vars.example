@@ -1,0 +1,11 @@
+# Copy to .dev.vars (gitignored) and fill in. Read via process.env — this
+# app has no Cloudflare bindings, it's a plain Node/stdio process.
+
+NEXTCLOUD_HOST=https://cloud.example.com
+NEXTCLOUD_USERNAME=
+NEXTCLOUD_PASSWORD=
+
+# Optional. If unset, falls back to the bundled fixtures/*.toml — handy
+# before you've put real config files on your Nextcloud yet.
+# LOCATIONS_CONFIG_PATH=/locations.toml
+# CALENDARS_CONFIG_PATH=/calendars.toml
