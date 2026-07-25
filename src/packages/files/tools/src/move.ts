@@ -1,13 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import { ok, err, resolvePath } from "./utils.js";
 import {
   PathSchema,
   LocationSchema,
   ForceSchema,
   formatConflict,
 } from "./schemas.js";
-import { resolveLocation } from "@dav-worker/files-locations";
 
 export function registerMoveTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
@@ -28,8 +27,8 @@ export function registerMoveTool(server: McpServer, deps: FileToolsDeps): void {
     },
     async ({ src: srcArg, dst: dstArg, srcLocation, dstLocation, force }) => {
       try {
-        const src = srcLocation ? resolveLocation(deps.config, srcLocation) : (srcArg ?? "");
-        const dst = dstLocation ? resolveLocation(deps.config, dstLocation) : (dstArg ?? "");
+        const src = resolvePath(deps.config, { path: srcArg, location: srcLocation });
+        const dst = resolvePath(deps.config, { path: dstArg, location: dstLocation });
         const client = deps.storage;
         const result = await client.move(src, dst, force);
 

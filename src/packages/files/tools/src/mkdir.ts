@@ -1,8 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import { ok, err, resolvePath } from "./utils.js";
 import { PathSchema, LocationSchema } from "./schemas.js";
-import { resolveLocation } from "@dav-worker/files-locations";
 
 export function registerCreateFolderTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
@@ -16,7 +15,7 @@ export function registerCreateFolderTool(server: McpServer, deps: FileToolsDeps)
     },
     async ({ path: pathArg, location }) => {
       try {
-        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
+        const path = resolvePath(deps.config, { path: pathArg, location });
         const client = deps.storage;
         const { alreadyExists } = await client.mkdir(path);
         return ok(

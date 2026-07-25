@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import { ok, err, resolvePath } from "./utils.js";
 import {
   BlockSchema,
   FromSchema,
@@ -9,7 +9,6 @@ import {
   ToSchema,
 } from "./schemas.js";
 import { resolveTarget } from "@dav-worker/files-parser";
-import { resolveLocation } from "@dav-worker/files-locations";
 
 export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
@@ -31,7 +30,7 @@ export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
     },
     async ({ path: pathArg, location, block, from, to }) => {
       try {
-        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
+        const path = resolvePath(deps.config, { path: pathArg, location });
         const client = deps.storage;
         const { content } = await client.read(path);
 

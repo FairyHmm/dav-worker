@@ -1,8 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import { ok, err, resolvePath } from "./utils.js";
 import { PathSchema, DepthSchema, LocationSchema } from "./schemas.js";
-import { resolveLocation } from "@dav-worker/files-locations";
 
 export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
@@ -20,7 +19,7 @@ export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
     },
     async ({ path: pathArg, location, depth }) => {
       try {
-        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
+        const path = resolvePath(deps.config, { path: pathArg, location }, { allowRoot: true });
         const client = deps.storage;
         const entries = await client.list(path, depth);
 

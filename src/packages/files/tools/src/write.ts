@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { FileToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import { ok, err, resolvePath } from "./utils.js";
 import {
   BlockSchema,
   FromSchema,
@@ -12,7 +12,6 @@ import {
   ToSchema,
 } from "./schemas.js";
 import { resolveTarget } from "@dav-worker/files-parser";
-import { resolveLocation } from "@dav-worker/files-locations";
 
 export function registerWriteTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
@@ -47,7 +46,7 @@ export function registerWriteTool(server: McpServer, deps: FileToolsDeps): void 
       to,
     }) => {
       try {
-        const path = location ? resolveLocation(deps.config, location) : (pathArg ?? "");
+        const path = resolvePath(deps.config, { path: pathArg, location });
         const client = deps.storage;
         const target = resolveTarget({ block, scope, from, to });
 
