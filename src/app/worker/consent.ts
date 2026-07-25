@@ -1,35 +1,71 @@
-// Layer 1 (SPEC-MONOREPO.md) consent screen: `workers-oauth-provider`'s
-// `defaultHandler` route for GET/POST /authorize. Collects Nextcloud
-// credentials + locations/calendars config paths in one form, per the
-// spec's "Consent screen contents" section — but stores the result
-// straight into the grant's `props` (see index.ts's SessionProps) rather
-// than separate TokenStore/SessionConfigStore KV stores, since
-// `completeAuthorization`'s encrypted `props` already is a session-keyed
-// store. "Log in with Nextcloud" (redirect-based) is deferred; only the
-// direct host/username/password path is implemented here.
+// Consent screen + authorization-code issuance. No `workers-oauth-provider`,
+// no grant store: `client_id` is itself a sealed token (see auth.ts) proving
+// which redirect_uris were registered, and the code this hands back is a
+// sealed, short-lived blob of the Nextcloud credential + PKCE challenge.
+// Nothing is written to any store anywhere in this file.
 
-import type { OAuthHelpers, AuthRequest, ClientInfo } from "@cloudflare/workers-oauth-provider";
+import { seal, open, verifyPkce, TokenError } from "./auth.js";
 import type { SessionProps } from "./index.js";
 
-interface AuthorizeEnv {
-  OAUTH_PROVIDER: OAuthHelpers;
+interface AuthorizeParams {
+  clientId: string;
+  redirectUri: string;
+  state: string;
+  codeChallenge: string;
+  scope: string;
 }
 
-export async function handleAuthorize(request: Request, env: AuthorizeEnv): Promise<Response> {
+interface ClientRegistration {
+  redirect_uris: string[];
+  client_name?: string;
+}
+
+interface CodePayload {
+  props: SessionProps;
+  codeChallenge: string;
+  redirectUri: string;
+}
+
+const CODE_TTL_SECONDS = 120;
+
+export async function handleAuthorize(request: Request, secret: string): Promise<Response> {
+  const url = new URL(request.url);
+
   if (request.method === "POST") {
-    return handleConsentSubmit(request, env);
+    return handleConsentSubmit(request, secret);
   }
 
-  const oauthReqInfo = await env.OAUTH_PROVIDER.parseAuthRequest(request);
-  const clientInfo = await env.OAUTH_PROVIDER.lookupClient(oauthReqInfo.clientId);
-  return new Response(renderConsentForm(oauthReqInfo, clientInfo), {
+  const params: AuthorizeParams = {
+    clientId: url.searchParams.get("client_id") ?? "",
+    redirectUri: url.searchParams.get("redirect_uri") ?? "",
+    state: url.searchParams.get("state") ?? "",
+    codeChallenge: url.searchParams.get("code_challenge") ?? "",
+    scope: url.searchParams.get("scope") ?? "",
+  };
+
+  let registration: ClientRegistration;
+  try {
+    registration = await open<ClientRegistration>(secret, params.clientId);
+  } catch (err: unknown) {
+    const msg = err instanceof TokenError ? err.message : "invalid client_id";
+    return new Response(`Invalid client: ${msg}`, { status: 400 });
+  }
+  if (!registration.redirect_uris.includes(params.redirectUri)) {
+    return new Response("redirect_uri does not match registered client", { status: 400 });
+  }
+
+  return new Response(renderConsentForm(params, registration), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 }
 
-async function handleConsentSubmit(request: Request, env: AuthorizeEnv): Promise<Response> {
+async function handleConsentSubmit(request: Request, secret: string): Promise<Response> {
   const form = await request.formData();
-  const oauthReqInfo: AuthRequest = JSON.parse(String(form.get("oauthReqInfo")));
+
+  const clientId = String(form.get("clientId") ?? "");
+  const redirectUri = String(form.get("redirectUri") ?? "");
+  const state = String(form.get("state") ?? "");
+  const codeChallenge = String(form.get("codeChallenge") ?? "");
 
   const host = String(form.get("host") ?? "").trim();
   const username = String(form.get("username") ?? "").trim();
@@ -37,23 +73,29 @@ async function handleConsentSubmit(request: Request, env: AuthorizeEnv): Promise
   const locations = String(form.get("locationsConfigPath") ?? "").trim();
   const calendars = String(form.get("calendarsConfigPath") ?? "").trim();
 
+  // Re-validated here too: the client_id/redirect_uri came back from the
+  // browser via hidden fields, so treat them as untrusted input again.
+  let registration: ClientRegistration;
+  try {
+    registration = await open<ClientRegistration>(secret, clientId);
+  } catch {
+    return new Response("Invalid client", { status: 400 });
+  }
+  if (!registration.redirect_uris.includes(redirectUri)) {
+    return new Response("redirect_uri does not match registered client", { status: 400 });
+  }
+
   const props: SessionProps = {
     credential: { host, username, password },
     configs: { locations, calendars },
   };
+  const payload: CodePayload = { props, codeChallenge, redirectUri };
+  const code = await seal(secret, payload, CODE_TTL_SECONDS);
 
-  const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
-    request: oauthReqInfo,
-    // No user-account system here — this deploy is single-tenant-per-login
-    // (SPEC.md: "personal utility"), so host+username is a stable enough
-    // identity for grant enumeration/revocation.
-    userId: `${host}:${username}`,
-    metadata: { username, host },
-    scope: oauthReqInfo.scope,
-    props,
-  });
-
-  return Response.redirect(redirectTo, 302);
+  const redirect = new URL(redirectUri);
+  redirect.searchParams.set("code", code);
+  redirect.searchParams.set("state", state);
+  return Response.redirect(redirect.toString(), 302);
 }
 
 function escapeHtml(s: string): string {
@@ -64,9 +106,8 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderConsentForm(oauthReqInfo: AuthRequest, clientInfo: ClientInfo | null): string {
-  const clientName = clientInfo?.clientName ?? oauthReqInfo.clientId;
-  const oauthReqInfoJson = escapeHtml(JSON.stringify(oauthReqInfo));
+function renderConsentForm(params: AuthorizeParams, registration: ClientRegistration): string {
+  const clientName = registration.client_name ?? params.clientId;
 
   return `<!doctype html>
 <html>
@@ -84,8 +125,13 @@ function renderConsentForm(oauthReqInfo: AuthRequest, clientInfo: ClientInfo | n
 </head>
 <body>
   <h1>${escapeHtml(clientName)} wants to connect to your Nextcloud</h1>
+  <p class="hint">Nothing you enter here is stored on the server. Your Nextcloud credential
+    and config paths travel only inside your client's own encrypted access token.</p>
   <form method="POST">
-    <input type="hidden" name="oauthReqInfo" value='${oauthReqInfoJson}' />
+    <input type="hidden" name="clientId" value="${escapeHtml(params.clientId)}" />
+    <input type="hidden" name="redirectUri" value="${escapeHtml(params.redirectUri)}" />
+    <input type="hidden" name="state" value="${escapeHtml(params.state)}" />
+    <input type="hidden" name="codeChallenge" value="${escapeHtml(params.codeChallenge)}" />
 
     <label>Nextcloud host
       <input type="url" name="host" placeholder="https://cloud.example.com" required />
@@ -109,4 +155,15 @@ function renderConsentForm(oauthReqInfo: AuthRequest, clientInfo: ClientInfo | n
   </form>
 </body>
 </html>`;
+}
+
+export async function exchangeCode(
+  secret: string,
+  code: string,
+  codeVerifier: string,
+): Promise<SessionProps> {
+  const { props, codeChallenge } = await open<CodePayload>(secret, code);
+  const ok = await verifyPkce(codeVerifier, codeChallenge);
+  if (!ok) throw new TokenError("PKCE verification failed");
+  return props;
 }

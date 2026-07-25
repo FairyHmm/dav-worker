@@ -46,17 +46,14 @@
    */
   // "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
   /**
-   * KV Namespaces
-   * https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
+   * No KV namespaces. Auth is fully stateless (see app/worker/auth.ts):
+   * every token — authorization code, access token, even the DCR
+   * `client_id` — is self-contained ciphertext, so there's nothing to
+   * store server-side and no OAUTH_KV binding to provision.
    *
-   * Placeholder id — run `wrangler kv namespace create OAUTH_KV` and paste
-   * the real id here before first deploy. OAUTH_KV is the binding name
-   * `workers-oauth-provider` expects by convention: it stores grants/tokens
-   * and, crucially, each grant's encrypted `props` — which is where the
-   * Nextcloud `Credential` + locations/calendars config paths live (see
-   * `index.ts`'s `SessionProps`). There's deliberately no separate
-   * TokenStore/SessionConfigStore KV namespace: `props` already is a
-   * session-keyed store, so a second one would just be duplicated state.
+   * Required secret (not committed, set via `wrangler secret put`):
+   *   SESSION_SECRET — symmetric key material tokens are sealed under.
+   *   Rotating it invalidates every outstanding token at once; that's the
+   *   entire revocation mechanism by design.
    */
-  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
 }

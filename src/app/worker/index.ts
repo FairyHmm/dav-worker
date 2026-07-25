@@ -1,5 +1,3 @@
-import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
-import type { OAuthProviderOptions } from "@cloudflare/workers-oauth-provider";
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
@@ -8,16 +6,15 @@ import { parseFilesConfig } from "@dav-worker/files-locations";
 import {
   createNextcloudWebDAVStorage,
   createNextcloudCalDAVStorage,
+  WebDAVHttpError,
 } from "@dav-worker/storage-nextcloud";
-import { handleAuthorize } from "./consent.js";
+import { handleAuthorize, exchangeCode } from "./consent.js";
+import { seal, open, TokenError } from "./auth.js";
 
-// SPEC-MONOREPO.md's Layer 2 `Credential` + the config-path pair that would
-// otherwise live in a separate `SessionConfigStore` (Session Config
-// section), collapsed into one object: `workers-oauth-provider`'s grant
-// `props` is already a session-keyed encrypted store, so there's no need
-// for TOKEN_STORE/SESSION_CONFIG_STORE KV as separate stores. `configs` is
-// deliberately open-ended (more DAV collections — address books, etc. —
-// slot in here later without a shape change to `credential`).
+// No `workers-oauth-provider`, no OAUTH_KV, no grant store of any kind:
+// every token in this file is self-contained (see auth.ts). SessionProps
+// is exactly what used to live in a grant's `props` — now it only ever
+// exists encrypted inside a token the client holds, never server-side.
 export interface SessionProps {
   credential: { host: string; username: string; password: string };
   configs: {
@@ -26,13 +23,13 @@ export interface SessionProps {
   };
 }
 
-// TODO-MONOREPO 9e: resolves props.configs.{locations,calendars} at their
-// session paths via the same NextcloudWebDAVStorage used for file tools
-// (a config path is just another vault file) instead of the previous
-// build-time-bundled files.toml/calendars.toml. Called once per request —
-// createServer runs fresh per request already, so this doubles as the
-// "per-request cache" SPEC-MONOREPO.md's Session Config section asks for;
-// no separate cache needed on top of that.
+interface Env {
+  SESSION_SECRET: string;
+}
+
+const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const CLIENT_REGISTRATION_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
+
 async function createServer(props: SessionProps): Promise<McpServer> {
   const server = new McpServer({
     name: "dav-worker",
@@ -55,42 +52,121 @@ async function createServer(props: SessionProps): Promise<McpServer> {
   return server;
 }
 
-// Typed loosely (not `ExportedHandler<Env>`) deliberately: `workers-oauth-provider`
-// pulls its own copy of `@cloudflare/workers-types` as a nested dependency,
-// which is structurally identical to but a nominally different `Request`/
-// `Headers` than the root's — a workspace dual-package hazard, not a real
-// type error. `any` at this one boundary avoids fighting that duplication;
-// everything inside `fetch` is cast back to the real `Env`/`Request` types.
-const apiHandler = {
-  async fetch(request: any, env: any, ctx: any): Promise<Response> {
-    const props = (ctx as ExecutionContext & { props: SessionProps }).props;
-    const server = await createServer(props);
-    return createMcpHandler(server)(request as Request, env as Env, ctx as ExecutionContext);
-  },
-};
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
 
-const defaultHandler = {
-  fetch(request: any, env: any, _ctx: any): Response | Promise<Response> {
-    const url = new URL((request as Request).url);
+// Dynamic Client Registration (RFC 7591), stateless: the returned
+// `client_id` *is* the registration, sealed under SESSION_SECRET. There is
+// nothing to look up later — /authorize just re-opens the client_id to
+// recover the redirect_uris it was issued for.
+async function handleRegister(request: Request, secret: string): Promise<Response> {
+  const body = (await request.json()) as { redirect_uris?: string[]; client_name?: string };
+  const redirect_uris = body.redirect_uris ?? [];
+  if (redirect_uris.length === 0) {
+    return jsonResponse({ error: "invalid_client_metadata", error_description: "redirect_uris required" }, 400);
+  }
+  const client_id = await seal(
+    secret,
+    { redirect_uris, client_name: body.client_name },
+    CLIENT_REGISTRATION_TTL_SECONDS,
+  );
+  return jsonResponse({ client_id, redirect_uris, client_name: body.client_name, token_endpoint_auth_method: "none" });
+}
+
+async function handleToken(request: Request, secret: string): Promise<Response> {
+  const form = await request.formData();
+  if (String(form.get("grant_type")) !== "authorization_code") {
+    return jsonResponse({ error: "unsupported_grant_type" }, 400);
+  }
+  const code = String(form.get("code") ?? "");
+  const codeVerifier = String(form.get("code_verifier") ?? "");
+
+  let props: SessionProps;
+  try {
+    props = await exchangeCode(secret, code, codeVerifier);
+  } catch (err: unknown) {
+    const description = err instanceof TokenError ? err.message : "invalid code";
+    return jsonResponse({ error: "invalid_grant", error_description: description }, 400);
+  }
+
+  const access_token = await seal(secret, props, ACCESS_TOKEN_TTL_SECONDS);
+  return jsonResponse({
+    access_token,
+    token_type: "bearer",
+    expires_in: ACCESS_TOKEN_TTL_SECONDS,
+  });
+}
+
+function wellKnownMetadata(origin: string) {
+  return {
+    issuer: origin,
+    authorization_endpoint: `${origin}/authorize`,
+    token_endpoint: `${origin}/token`,
+    registration_endpoint: `${origin}/register`,
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code"],
+    code_challenge_methods_supported: ["S256"],
+    token_endpoint_auth_methods_supported: ["none"],
+  };
+}
+
+async function handleMcp(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const authHeader = request.headers.get("authorization") ?? "";
+  const match = /^Bearer (.+)$/i.exec(authHeader);
+  if (!match) {
+    return new Response("Missing bearer token. Connect via /authorize.", { status: 401 });
+  }
+
+  let props: SessionProps;
+  try {
+    props = await open<SessionProps>(env.SESSION_SECRET, match[1]);
+  } catch {
+    return new Response("Invalid or expired token. Reconnect via /authorize.", { status: 401 });
+  }
+
+  let server: McpServer;
+  try {
+    server = await createServer(props);
+  } catch (err) {
+    // Session setup (config-path reads, TOML parsing) failing shouldn't
+    // crash the request with a bare 500 — distinguish "your Nextcloud
+    // credential is wrong" (401, re-auth via /authorize is the fix) from
+    // everything else (bad config path, malformed TOML, Nextcloud
+    // unreachable — 502). Neither branch echoes `err.message` back to the
+    // client: a parse error could quote back arbitrary bytes from the
+    // user's own config file.
+    if (err instanceof WebDAVHttpError && err.status === 401) {
+      return new Response("Nextcloud authentication failed. Reconnect via /authorize.", { status: 401 });
+    }
+    return new Response("Failed to start session: could not load Nextcloud config.", { status: 502 });
+  }
+
+  return createMcpHandler(server)(request, env as unknown as globalThis.Env, ctx);
+}
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/.well-known/oauth-authorization-server") {
+      return jsonResponse(wellKnownMetadata(url.origin));
+    }
+    if (url.pathname === "/register" && request.method === "POST") {
+      return handleRegister(request, env.SESSION_SECRET);
+    }
     if (url.pathname === "/authorize") {
-      return handleAuthorize(
-        request as Request,
-        env as { OAUTH_PROVIDER: import("@cloudflare/workers-oauth-provider").OAuthHelpers },
-      );
+      return handleAuthorize(request, env.SESSION_SECRET);
+    }
+    if (url.pathname === "/token" && request.method === "POST") {
+      return handleToken(request, env.SESSION_SECRET);
+    }
+    if (url.pathname === "/mcp") {
+      return handleMcp(request, env, ctx);
     }
     return new Response("Not found", { status: 404 });
   },
 };
-
-export default new OAuthProvider({
-  apiRoute: "/mcp",
-  // Cast at this one boundary, not throughout the file: the duplicate-
-  // `@cloudflare/workers-types` issue described above means our `Response`
-  // is structurally but not nominally the library's `Response`. Runtime
-  // behavior is identical.
-  apiHandler: apiHandler as unknown as OAuthProviderOptions["apiHandler"],
-  defaultHandler: defaultHandler as unknown as OAuthProviderOptions["defaultHandler"],
-  authorizeEndpoint: "/authorize",
-  tokenEndpoint: "/token",
-  clientRegistrationEndpoint: "/register",
-});

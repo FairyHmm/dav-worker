@@ -5,7 +5,6 @@
   "type": "module",
   "main": "./index.ts",
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "^0.0.5",
     "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
