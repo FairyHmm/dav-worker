@@ -1,51 +1,88 @@
-# Building a Remote MCP Server on Cloudflare (Without Auth)
+# dav-worker
 
-This example allows you to deploy a remote MCP server that doesn't require authentication on Cloudflare Workers.
+A Cloudflare Worker exposing a remote MCP server (streamable-http) backed by
+a Nextcloud instance — file (WebDAV) and calendar (CalDAV) tools, callable
+from Claude Desktop, claude.ai, or any MCP client.
 
-## Get started:
+No database, no KV, no Durable Objects, no persistent process. Every tool
+call is a fresh outbound request to your Nextcloud instance; auth is fully
+stateless.
 
-[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/ai/tree/main/demos/remote-mcp-authless)
+## What it does
 
-This will deploy your MCP server to a URL like: `remote-mcp-server-authless.<your-account>.workers.dev/mcp`
+- **Files** — list, read, write, move, copy, mkdir, delete, stat, outline.
+  Reads/writes support targeting a single Markdown heading block or a raw
+  line range, not just whole-file. Named `location` shortcuts resolve to
+  vault paths so you don't have to type full paths for common places.
+- **Calendar** — list, create, update, delete events; find free/busy slots.
 
-Alternatively, you can use the command line below to get the remote MCP Server created on your local machine:
+## Architecture
+
+This is a pnpm monorepo. `src/app/*` are the two composition roots (nothing
+else may branch on which one you're in); `src/packages/*/*` are domain
+packages with narrow, platform-agnostic exports.
+
+```
+src/
+├─ app/
+│  ├─ worker/    ← Cloudflare Worker: OAuth + consent screen + /mcp (streamable-http)
+│  └─ local/     ← stdio MCP server for local dev — no OAuth, reads creds from env
+└─ packages/
+   ├─ auth/upstream/        ← the one sanctioned cross-domain dependency
+   ├─ calendar/{contracts,ical,tools}
+   ├─ files/{contracts,locations,parser,tools}
+   ├─ clients/webdav/       ← raw WebDAV transport
+   └─ storage/nextcloud/    ← WebDAV + CalDAV storage built on clients/webdav
+```
+
+Package boundaries are enforced by pnpm workspace deps, not just tree-shaking.
+
+## Auth
+
+No `workers-oauth-provider`, no OAUTH_KV, no grant store. Every token
+(client registration, auth code, access token) is a self-contained
+AES-256-GCM sealed blob — valid iff it decrypts. The consent screen at
+`/authorize` collects your Nextcloud host/username/app-password and the
+vault paths to your `locations.toml`/`calendars.toml`, seals them into the
+access token the client holds, and nothing is stored server-side.
+
+Access tokens don't expire by design — the real revocation lever is
+rotating a Nextcloud app password (or `TOKEN_KEY`, which invalidates every
+outstanding token at once).
+
+## Setup
+
+**Deploy (Worker, for use from claude.ai / Claude Desktop remotely):**
 
 ```bash
-npm create cloudflare@latest -- my-mcp-server --template=cloudflare/ai/demos/remote-mcp-authless
+pnpm install
+wrangler secret put TOKEN_KEY -c src/app/worker/wrangler.jsonc   # random 32+ byte secret
+pnpm deploy
 ```
 
-## Customizing your MCP Server
+Then in your MCP client, add the deployed `/mcp` URL and go through the
+`/authorize` consent screen once — no other configuration needed.
 
-To add your own [tools](https://developers.cloudflare.com/agents/model-context-protocol/tools/) to the MCP server, define each tool inside the `init()` method of `src/app/worker/index.ts` using `this.server.tool(...)`.
+**Local dev (stdio, no OAuth):**
 
-## Connect to Cloudflare AI Playground
-
-You can connect to your MCP server from the Cloudflare AI Playground, which is a remote MCP client:
-
-1. Go to https://playground.ai.cloudflare.com/
-2. Enter your deployed MCP server URL (`remote-mcp-server-authless.<your-account>.workers.dev/mcp`)
-3. You can now use your MCP tools directly from the playground!
-
-## Connect Claude Desktop to your MCP server
-
-You can also connect to your remote MCP server from local MCP clients, by using the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote).
-
-To connect to your MCP server from Claude Desktop, follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config.
-
-Update with this configuration:
-
-```json
-{
-	"mcpServers": {
-		"calculator": {
-			"command": "npx",
-			"args": [
-				"mcp-remote",
-				"http://localhost:8787/mcp" // or remote-mcp-server-authless.your-account.workers.dev/mcp
-			]
-		}
-	}
-}
+```bash
+cd src/app/local
+cp .dev.vars.example .dev.vars   # fill in NEXTCLOUD_HOST / _USERNAME / _PASSWORD
+pnpm install
+pnpm start
 ```
 
-Restart Claude and you should see the tools become available.
+Without `LOCATIONS_CONFIG_PATH` / `CALENDARS_CONFIG_PATH` set, it falls back
+to the bundled fixtures in `src/app/local/fixtures/` so you can try it
+before setting up real config files on your Nextcloud.
+
+## Development
+
+```bash
+pnpm type-check   # tsc --noEmit
+pnpm lint:fix      # oxlint --fix
+pnpm format       # oxfmt --write .
+```
+
+Run `wrangler types -c src/app/worker/wrangler.jsonc ...` after changing
+bindings in `wrangler.jsonc`.

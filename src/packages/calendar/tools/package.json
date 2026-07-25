@@ -8,6 +8,11 @@
   "dependencies": {
     "@dav-worker/calendar-contracts": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
-    "@dav-worker/clients-webdav": "workspace:*"
+    "@dav-worker/clients-webdav": "workspace:*",
+    "smol-toml": "^1.7.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
   }
 }

@@ -7,40 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.29.0
-        version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
-      agents:
-        specifier: ^0.17.1
-        version: 0.17.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@4.20260702.1)(react@19.2.7)(rolldown@1.1.5)(zod@4.4.3)
-      fast-xml-parser:
-        specifier: ^4.4.0
-        version: 4.5.7
-      mdast-util-to-string:
-        specifier: ^4.0.0
-        version: 4.0.0
-      remark-frontmatter:
-        specifier: ^5.0.0
-        version: 5.0.0
-      remark-math:
-        specifier: ^6.0.0
-        version: 6.0.0
-      remark-parse:
-        specifier: ^11.0.0
-        version: 11.0.0
-      remark-stringify:
-        specifier: ^11.0.0
-        version: 11.0.0
-      smol-toml:
-        specifier: ^1.7.0
-        version: 1.7.0
-      unified:
-        specifier: ^11.0.5
-        version: 11.0.5
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
     devDependencies:
       '@types/mdast':
         specifier: ^4.0.4
@@ -124,14 +90,51 @@ importers:
       '@dav-worker/clients-webdav':
         specifier: workspace:*
         version: link:../../clients/webdav
+      smol-toml:
+        specifier: ^1.7.0
+        version: 1.7.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
-  src/packages/clients/webdav: {}
+  src/packages/clients/webdav:
+    dependencies:
+      fast-xml-parser:
+        specifier: ^4.4.0
+        version: 4.5.7
 
   src/packages/files/contracts: {}
 
-  src/packages/files/locations: {}
+  src/packages/files/locations:
+    dependencies:
+      smol-toml:
+        specifier: ^1.7.0
+        version: 1.7.0
 
-  src/packages/files/parser: {}
+  src/packages/files/parser:
+    dependencies:
+      mdast-util-to-string:
+        specifier: ^4.0.0
+        version: 4.0.0
+      remark-frontmatter:
+        specifier: ^5.0.0
+        version: 5.0.0
+      remark-math:
+        specifier: ^6.0.0
+        version: 6.0.0
+      remark-parse:
+        specifier: ^11.0.0
+        version: 11.0.0
+      remark-stringify:
+        specifier: ^11.0.0
+        version: 11.0.0
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
 
   src/packages/files/tools:
     dependencies:
@@ -144,6 +147,13 @@ importers:
       '@dav-worker/files-parser':
         specifier: workspace:*
         version: link:../parser
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
   src/packages/storage/nextcloud:
     dependencies:
