@@ -24,11 +24,9 @@ export interface SessionProps {
 }
 
 interface Env {
-  SESSION_SECRET: string;
+  TOKEN_KEY: string;
 }
 
-const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
-const CLIENT_REGISTRATION_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
 async function createServer(props: SessionProps): Promise<McpServer> {
   const server = new McpServer({
@@ -60,7 +58,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 // Dynamic Client Registration (RFC 7591), stateless: the returned
-// `client_id` *is* the registration, sealed under SESSION_SECRET. There is
+// `client_id` *is* the registration, sealed under TOKEN_KEY. There is
 // nothing to look up later — /authorize just re-opens the client_id to
 // recover the redirect_uris it was issued for.
 async function handleRegister(request: Request, secret: string): Promise<Response> {
@@ -69,11 +67,7 @@ async function handleRegister(request: Request, secret: string): Promise<Respons
   if (redirect_uris.length === 0) {
     return jsonResponse({ error: "invalid_client_metadata", error_description: "redirect_uris required" }, 400);
   }
-  const client_id = await seal(
-    secret,
-    { redirect_uris, client_name: body.client_name },
-    CLIENT_REGISTRATION_TTL_SECONDS,
-  );
+  const client_id = await seal(secret, { redirect_uris, client_name: body.client_name });
   return jsonResponse({ client_id, redirect_uris, client_name: body.client_name, token_endpoint_auth_method: "none" });
 }
 
@@ -93,11 +87,13 @@ async function handleToken(request: Request, secret: string): Promise<Response> 
     return jsonResponse({ error: "invalid_grant", error_description: description }, 400);
   }
 
-  const access_token = await seal(secret, props, ACCESS_TOKEN_TTL_SECONDS);
+  // No ttlSeconds: access tokens are long-lived by design (see
+  // Docs/SPEC-STATELESS-AUTH.md Token lifetime — Nextcloud app-password
+  // revocation is the real kill switch, not a worker-side TTL).
+  const access_token = await seal(secret, props);
   return jsonResponse({
     access_token,
     token_type: "bearer",
-    expires_in: ACCESS_TOKEN_TTL_SECONDS,
   });
 }
 
@@ -123,7 +119,7 @@ async function handleMcp(request: Request, env: Env, ctx: ExecutionContext): Pro
 
   let props: SessionProps;
   try {
-    props = await open<SessionProps>(env.SESSION_SECRET, match[1]);
+    props = await open<SessionProps>(env.TOKEN_KEY, match[1]);
   } catch {
     return new Response("Invalid or expired token. Reconnect via /authorize.", { status: 401 });
   }
@@ -156,13 +152,13 @@ export default {
       return jsonResponse(wellKnownMetadata(url.origin));
     }
     if (url.pathname === "/register" && request.method === "POST") {
-      return handleRegister(request, env.SESSION_SECRET);
+      return handleRegister(request, env.TOKEN_KEY);
     }
     if (url.pathname === "/authorize") {
-      return handleAuthorize(request, env.SESSION_SECRET);
+      return handleAuthorize(request, env.TOKEN_KEY);
     }
     if (url.pathname === "/token" && request.method === "POST") {
-      return handleToken(request, env.SESSION_SECRET);
+      return handleToken(request, env.TOKEN_KEY);
     }
     if (url.pathname === "/mcp") {
       return handleMcp(request, env, ctx);

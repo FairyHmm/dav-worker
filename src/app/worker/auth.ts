@@ -1,19 +1,20 @@
-// Stateless auth primitive: every token (authorization code *and* access
-// token) is the payload itself, AES-GCM-encrypted under SESSION_SECRET.
-// There is no grant store, no KV, nothing keyed by session anywhere — a
-// token is valid iff it decrypts and hasn't expired. Losing SESSION_SECRET
-// (a Worker secret, not user data) invalidates every outstanding token at
-// once; that's the whole revocation story, and it's intentional.
+// Stateless auth primitive: every token is the payload itself, AES-256-GCM
+// encrypted under TOKEN_KEY. No lookup, anywhere — a token is valid iff it
+// decrypts (and, for tokens that carry one, hasn't passed its expiry).
+// TOKEN_KEY is the operator's own key material, not user data (see
+// Docs/SPEC-STATELESS-AUTH.md) — losing/rotating it invalidates every
+// outstanding token at once; that's the only revocation lever this worker
+// has. Real per-credential revocation is Nextcloud's app-password revoke,
+// which works regardless of token TTL — see spec's Token lifetime section.
 
-function base64UrlEncode(bytes: Uint8Array): string {
+function toBase64(bytes: Uint8Array): string {
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(bin);
 }
 
-function base64UrlDecode(s: string): Uint8Array {
-  const padded = s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=");
-  const bin = atob(padded);
+function fromBase64(s: string): Uint8Array {
+  const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
@@ -24,35 +25,42 @@ async function deriveKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 
-export async function seal(secret: string, payload: unknown, ttlSeconds: number): Promise<string> {
+// ttlSeconds omitted/undefined = never expires (see spec: access tokens are
+// long-lived by design, real revocation happens Nextcloud-side). Auth codes
+// always pass a short ttlSeconds — that TTL is the handshake window, not
+// negotiable the way access-token lifetime is.
+export async function seal(secret: string, payload: unknown, ttlSeconds?: number): Promise<string> {
   const key = await deriveKey(secret);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const body = JSON.stringify({ payload, exp: Math.floor(Date.now() / 1000) + ttlSeconds });
+  const exp = ttlSeconds === undefined ? null : Math.floor(Date.now() / 1000) + ttlSeconds;
+  const body = JSON.stringify({ payload, exp });
   const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(body));
-  const combined = new Uint8Array(iv.length + cipher.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(cipher), iv.length);
-  return base64UrlEncode(combined);
+  return `${toBase64(iv)}.${toBase64(new Uint8Array(cipher))}`;
 }
 
 export class TokenError extends Error {}
 
 export async function open<T>(secret: string, token: string): Promise<T> {
+  const [ivPart, cipherPart] = token.split(".");
+  if (!ivPart || !cipherPart) throw new TokenError("token is malformed");
+
   let plainBuf: ArrayBuffer;
   try {
     const key = await deriveKey(secret);
-    const combined = base64UrlDecode(token);
-    const iv = combined.slice(0, 12);
-    const cipher = combined.slice(12);
-    plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipher);
+    plainBuf = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: fromBase64(ivPart) },
+      key,
+      fromBase64(cipherPart),
+    );
   } catch {
-    throw new TokenError("token is malformed or was not sealed with this secret");
+    throw new TokenError("token is malformed or was not sealed with this key");
   }
+
   const { payload, exp } = JSON.parse(new TextDecoder().decode(plainBuf)) as {
     payload: T;
-    exp: number;
+    exp: number | null;
   };
-  if (Math.floor(Date.now() / 1000) > exp) throw new TokenError("token expired");
+  if (exp !== null && Math.floor(Date.now() / 1000) > exp) throw new TokenError("token expired");
   return payload;
 }
 
@@ -61,5 +69,5 @@ export async function open<T>(secret: string, token: string): Promise<T> {
 // together besides what the client itself proves it holds.
 export async function verifyPkce(verifier: string, challenge: string): Promise<boolean> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-  return base64UrlEncode(new Uint8Array(digest)) === challenge;
+  return toBase64(new Uint8Array(digest)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") === challenge;
 }

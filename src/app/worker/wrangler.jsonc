@@ -51,9 +51,10 @@
    * `client_id` — is self-contained ciphertext, so there's nothing to
    * store server-side and no OAUTH_KV binding to provision.
    *
-   * Required secret (not committed, set via `wrangler secret put`):
-   *   SESSION_SECRET — symmetric key material tokens are sealed under.
-   *   Rotating it invalidates every outstanding token at once; that's the
-   *   entire revocation mechanism by design.
+   * Required secret (not committed, set via `wrangler secret put TOKEN_KEY`):
+   *   TOKEN_KEY — symmetric key material tokens are sealed under. Rotating
+   *   it invalidates every outstanding token at once. Real per-credential
+   *   revocation is Nextcloud's app-password revoke, not this key — see
+   *   Docs/SPEC-STATELESS-AUTH.md.
    */
 }
