@@ -10,6 +10,8 @@ import {
 } from "@dav-worker/storage-nextcloud";
 import { handleAuthorize, exchangeCode } from "./consent.js";
 import { seal, open, TokenError } from "./auth.js";
+import defaultLocationsToml from "./fixtures/locations.toml";
+import defaultCalendarsToml from "./fixtures/calendars.toml";
 
 // No `workers-oauth-provider`, no OAUTH_KV, no grant store of any kind:
 // every token in this file is self-contained (see auth.ts). SessionProps
@@ -28,6 +30,19 @@ interface Env {
 }
 
 
+// Blank config path from the consent screen falls back to the bundled
+// fixture (mirrors app/local's fixture fallback) instead of hitting
+// Nextcloud with an empty path. Temporary — goes away once arbitrary
+// per-user config paths are the only supported mode (Fairy's call).
+async function loadConfig(
+  path: string,
+  defaultToml: string,
+  fileStorage: { read(path: string): Promise<{ content: string }> },
+): Promise<string> {
+  if (!path) return defaultToml;
+  return (await fileStorage.read(path)).content;
+}
+
 async function createServer(props: SessionProps): Promise<McpServer> {
   const server = new McpServer({
     name: "dav-worker",
@@ -37,12 +52,12 @@ async function createServer(props: SessionProps): Promise<McpServer> {
   const fileStorage = createNextcloudWebDAVStorage(props.credential);
   const calendarStorage = createNextcloudCalDAVStorage(props.credential);
 
-  const [locationsRaw, calendarsRaw] = await Promise.all([
-    fileStorage.read(props.configs.locations),
-    fileStorage.read(props.configs.calendars),
+  const [locationsContent, calendarsContent] = await Promise.all([
+    loadConfig(props.configs.locations, defaultLocationsToml, fileStorage),
+    loadConfig(props.configs.calendars, defaultCalendarsToml, fileStorage),
   ]);
-  const filesConfig = parseFilesConfig(locationsRaw.content);
-  const calendarConfig = parseCalendarConfig(calendarsRaw.content);
+  const filesConfig = parseFilesConfig(locationsContent);
+  const calendarConfig = parseCalendarConfig(calendarsContent);
 
   registerFileTools(server, { storage: fileStorage, config: filesConfig });
   registerCalendarTools(server, { storage: calendarStorage, config: calendarConfig });
@@ -110,6 +125,17 @@ function wellKnownMetadata(origin: string) {
   };
 }
 
+// RFC 9728 protected-resource metadata. MCP clients (incl. Claude) fetch
+// this during connection discovery to confirm which authorization
+// server(s) are valid for this resource — without it, clients may treat
+// the connection as failed even after a successful token exchange.
+function protectedResourceMetadata(origin: string) {
+  return {
+    resource: `${origin}/mcp`,
+    authorization_servers: [origin],
+  };
+}
+
 async function handleMcp(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const authHeader = request.headers.get("authorization") ?? "";
   const match = /^Bearer (.+)$/i.exec(authHeader);
@@ -150,6 +176,9 @@ export default {
 
     if (url.pathname === "/.well-known/oauth-authorization-server") {
       return jsonResponse(wellKnownMetadata(url.origin));
+    }
+    if (url.pathname === "/.well-known/oauth-protected-resource" || url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+      return jsonResponse(protectedResourceMetadata(url.origin));
     }
     if (url.pathname === "/register" && request.method === "POST") {
       return handleRegister(request, env.TOKEN_KEY);
