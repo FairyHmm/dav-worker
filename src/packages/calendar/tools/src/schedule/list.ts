@@ -1,22 +1,22 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CalendarToolsDeps } from "./deps.js";
+import type { CalendarToolsDeps } from "../deps.js";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
-import { ok, err } from "./utils.js";
-import { categorySchema, TimeWindowSchema } from "./utils/schemas.js";
-import { resolveCalendarName, allCalendarNames } from "./calendars.js";
-import { resolveTimeWindow } from "./utils/time.js";
-import { extractEventSummaries } from "./utils/mapping.js";
-import { formatWarnings } from "./utils/find.js";
-import type { EventSummary } from "./utils/mapping.js";
+import { ok, err } from "../utils.js";
+import { categorySchema, TimeWindowSchema } from "../utils/schemas.js";
+import { resolveCalendarName, allCalendarNames } from "../calendars.js";
+import { resolveTimeWindow } from "../utils/time.js";
+import { extractEventSummaries } from "../utils/mapping.js";
+import { formatWarnings } from "../utils/find.js";
+import type { EventSummary } from "../utils/mapping.js";
 
 export function registerScheduleListTool(server: McpServer, deps: CalendarToolsDeps): void {
   server.registerTool(
-    "nc_schedule_list",
+    "schedule_list",
     {
       description:
         "List calendar events in a time window. Omit `category` to search all " +
         "configured calendars. Does not yet merge in related tasks (tools/tasks " +
-        "isn't built yet) — that's a follow-up once nc_task_* exists.",
+        "isn't built yet) — that's a follow-up once task_* exists.",
       inputSchema: { time: TimeWindowSchema, category: categorySchema(deps.config).optional() },
     },
     async ({ time, category }) => {

@@ -1,16 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CalendarToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import type { CalendarToolsDeps } from "../deps.js";
+import { ok, err } from "../utils.js";
 import { z } from "zod";
-import { categorySchema, TimeWindowSchema } from "./utils/schemas.js";
-import { resolveCalendarName, allCalendarNames } from "./calendars.js";
+import { categorySchema, TimeWindowSchema } from "../utils/schemas.js";
+import { resolveCalendarName, allCalendarNames } from "../calendars.js";
 import {
   resolveTimeWindow,
   parseDurationMs,
   basicUtcToDate,
   dateToBasicUtc,
-} from "./utils/time.js";
-import { extractEventSummaries } from "./utils/mapping.js";
+} from "../utils/time.js";
+import { extractEventSummaries } from "../utils/mapping.js";
 
 interface Interval {
   start: Date;
@@ -56,7 +56,7 @@ function findGaps(
 
 export function registerScheduleFreeTool(server: McpServer, deps: CalendarToolsDeps): void {
   server.registerTool(
-    "nc_schedule_free",
+    "schedule_free",
     {
       description:
         "Find available time slots of at least `duration` within a window. " +

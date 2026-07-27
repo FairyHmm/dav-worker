@@ -1,14 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CalendarToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
-import { IdSchema, OccurrenceSchema } from "./utils/schemas.js";
-import { findEventAcrossCalendars, formatWarnings } from "./utils/find.js";
-import { findMasterEvent, findOccurrenceOverride } from "./utils/mapping.js";
+import type { CalendarToolsDeps } from "../deps.js";
+import { ok, err } from "../utils.js";
+import { IdSchema, OccurrenceSchema } from "../utils/schemas.js";
+import { findEventAcrossCalendars, formatWarnings } from "../utils/find.js";
+import { findMasterEvent, findOccurrenceOverride } from "../utils/mapping.js";
 import { parseCalendar, findAllComponents, addExdate, stringifyCalendar } from "@dav-worker/calendar-ical";
 
 export function registerScheduleDeleteTool(server: McpServer, deps: CalendarToolsDeps): void {
   server.registerTool(
-    "nc_schedule_delete",
+    "schedule_delete",
     {
       description:
         "Delete a calendar event by id, along with any travel-buffer " +
@@ -55,7 +55,7 @@ export function registerScheduleDeleteTool(server: McpServer, deps: CalendarTool
           }
           addExdate(master, occurrence);
 
-          // If this occurrence was previously edited (nc_schedule_update
+          // If this occurrence was previously edited (schedule_update
           // detaches an edited occurrence into its own override VEVENT with
           // a RECURRENCE-ID), the EXDATE above only stops the master's RRULE
           // from regenerating it — it does nothing to the override itself,

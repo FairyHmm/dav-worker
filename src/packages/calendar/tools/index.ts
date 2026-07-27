@@ -1,10 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CalendarToolsDeps } from "./src/deps.js";
-import { registerScheduleListTool } from "./src/list.js";
-import { registerScheduleCreateTool } from "./src/create.js";
-import { registerScheduleUpdateTool } from "./src/update.js";
-import { registerScheduleDeleteTool } from "./src/delete.js";
-import { registerScheduleFreeTool } from "./src/free.js";
+import { registerScheduleListTool } from "./src/schedule/list.js";
+import { registerScheduleCreateTool } from "./src/schedule/create.js";
+import { registerScheduleUpdateTool } from "./src/schedule/update.js";
+import { registerScheduleDeleteTool } from "./src/schedule/delete.js";
+import { registerScheduleFreeTool } from "./src/schedule/free.js";
 
 export type { CalendarToolsDeps } from "./src/deps.js";
 // TODO-MONOREPO 9e: config parsing exposed publicly so app/worker (and

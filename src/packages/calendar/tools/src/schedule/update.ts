@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CalendarToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import type { CalendarToolsDeps } from "../deps.js";
+import { ok, err } from "../utils.js";
 import {
   IdSchema,
   OccurrenceSchema,
@@ -8,19 +8,19 @@ import {
   DescriptionSchema,
   LocationFieldSchema,
   DateTimeSchema,
-} from "./utils/schemas.js";
-import { findEventAcrossCalendars, formatWarnings } from "./utils/find.js";
+} from "../utils/schemas.js";
+import { findEventAcrossCalendars, formatWarnings } from "../utils/find.js";
 import {
   applyEventFields,
   findMasterEvent,
   findOccurrenceOverride,
   detachOccurrence,
-} from "./utils/mapping.js";
+} from "../utils/mapping.js";
 import { parseCalendar, findAllComponents, stringifyCalendar } from "@dav-worker/calendar-ical";
 
 export function registerScheduleUpdateTool(server: McpServer, deps: CalendarToolsDeps): void {
   server.registerTool(
-    "nc_schedule_update",
+    "schedule_update",
     {
       description:
         "Update a calendar event by id, changing only the fields provided. " +
@@ -30,7 +30,7 @@ export function registerScheduleUpdateTool(server: McpServer, deps: CalendarTool
         "from the series (idempotent — repeat calls against the same " +
         "occurrence edit the existing detached instance rather than " +
         "re-detaching). Bulk update (array input) is NOT implemented here — " +
-        "compose repeated single calls via nc_batch instead.",
+        "compose repeated single calls via `batch` instead.",
       inputSchema: {
         id: IdSchema,
         occurrence: OccurrenceSchema,

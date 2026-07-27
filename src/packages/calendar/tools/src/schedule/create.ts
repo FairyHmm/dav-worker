@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CalendarToolsDeps } from "./deps.js";
-import { ok, err } from "./utils.js";
+import type { CalendarToolsDeps } from "../deps.js";
+import { ok, err } from "../utils.js";
 import {
   categorySchema,
   TitleSchema,
@@ -9,15 +9,15 @@ import {
   DateTimeSchema,
   TravelSchema,
   RecurrenceSchema,
-} from "./utils/schemas.js";
-import { resolveCalendarName } from "./calendars.js";
-import { buildEventComponent, buildTravelBufferComponent, applyRecurrence } from "./utils/mapping.js";
-import { parseDurationMs, shiftIso } from "./utils/time.js";
+} from "../utils/schemas.js";
+import { resolveCalendarName } from "../calendars.js";
+import { buildEventComponent, buildTravelBufferComponent, applyRecurrence } from "../utils/mapping.js";
+import { parseDurationMs, shiftIso } from "../utils/time.js";
 import { wrapInCalendar, stringifyCalendar } from "@dav-worker/calendar-ical";
 
 export function registerScheduleCreateTool(server: McpServer, deps: CalendarToolsDeps): void {
   server.registerTool(
-    "nc_schedule_create",
+    "schedule_create",
     {
       description:
         "Create a calendar event. Optionally pass `travel` to also create " +
@@ -48,7 +48,7 @@ export function registerScheduleCreateTool(server: McpServer, deps: CalendarTool
 
         // Travel buffers are separate VEVENTs, not folded into the main
         // event — this keeps them independently visible/movable in any
-        // CalDAV client, and independently cleanable by nc_schedule_delete.
+        // CalDAV client, and independently cleanable by schedule_delete.
         const bufferKinds: string[] = [];
         if (travel?.before) {
           const bufMs = parseDurationMs(travel.before);
