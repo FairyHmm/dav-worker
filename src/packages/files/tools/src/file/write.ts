@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { FileToolsDeps } from "../deps.js";
-import { ok, err, resolvePath } from "../utils.js";
+import { ok, err, resolvePath, appendWholeFile } from "../utils/index.js";
 import {
   BlockSchema,
   FromSchema,
@@ -18,12 +18,13 @@ export function registerWriteTool(server: McpServer, deps: FileToolsDeps): void 
     "file_write",
     {
       description:
-        "Write text content to a file. Without `block` or `from`/`to`, " +
-        "overwrites (or creates) the whole file. With `block`, patches one " +
-        "heading's section (see `scope`/`mode`). With `from`/`to`, patches a " +
-        "1-indexed line range (see `mode`). `block` and `from`/`to` are " +
-        "mutually exclusive. `location` can name a shortcut base, with " +
-        "`path` as a relative addition onto it.",
+        "Write text content to a file. `block` (+ optional `scope`) " +
+        "targets a markdown heading; `from`/`to` targets a 1-indexed line " +
+        "range; omit both to target the whole file. `mode: 'replace'` " +
+        "(default) overwrites the target, `mode: 'append'` adds after it " +
+        "(end of file, end of block, or right after the line range). " +
+        "`block` and `from`/`to` are mutually exclusive. `location` can " +
+        "name a shortcut base, with `path` as a relative addition onto it.",
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,
@@ -51,48 +52,26 @@ export function registerWriteTool(server: McpServer, deps: FileToolsDeps): void 
         const target = resolveTarget({ block, scope, from, to });
 
         if (target.kind === "whole-file") {
-          const { created } = await client.write(path, content);
-          return ok(created ? `Created: ${path}` : `Updated: ${path}`);
+          if (mode === "replace") {
+            const { created } = await client.write(path, content);
+            return ok(created ? `Created: ${path}` : `Updated: ${path}`);
+          }
+          const { combined, fileExists } = await appendWholeFile(client, path, content);
+          const { created } = await client.write(path, combined);
+          return ok(
+            fileExists
+              ? `Appended to: ${path}`
+              : `Created: ${path}${created ? "" : " (unexpectedly already existed)"}`,
+          );
         }
 
         const { content: existing } = await client.read(path);
-
-        switch (target.kind) {
-          case "markdown": {
-            const updated = target.handler.write(
-              existing,
-              target.address,
-              content,
-              mode,
-            );
-            if (updated === undefined) {
-              return err(
-                new Error(`No heading named "${block}" found in ${path}.`),
-              );
-            }
-            await client.write(path, updated);
-            return ok(`Updated block "${block}" (${scope}/${mode}) in ${path}`);
-          }
-          case "raw": {
-            const updated = target.handler.write(
-              existing,
-              target.address,
-              content,
-              mode,
-            );
-            if (updated === undefined) {
-              return err(
-                new Error(
-                  `Line range ${from}-${to ?? from} is out of bounds in ${path}.`,
-                ),
-              );
-            }
-            await client.write(path, updated);
-            return ok(
-              `Updated lines ${from}-${to ?? from} (${mode}) in ${path}`,
-            );
-          }
+        const updated = target.write(existing, content, mode);
+        if (updated === undefined) {
+          return err(new Error(target.notFoundError));
         }
+        await client.write(path, updated);
+        return ok(`Updated ${target.describe(mode)} in ${path}`);
       } catch (e) {
         return err(e);
       }

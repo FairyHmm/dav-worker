@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "../deps.js";
-import { ok, err, resolvePath } from "../utils.js";
+import { ok, err, resolvePath } from "../utils/index.js";
 import { PathSchema, DepthSchema, LocationSchema } from "../schemas.js";
 
 export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
@@ -8,9 +8,8 @@ export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
     "dir_list",
     {
       description:
-        "List the contents of a directory. Use an empty string or '/' for " +
-        "the root. `location` can name a shortcut base, with `path` as a " +
-        "relative addition onto it.",
+        "List the contents of a directory. `location` can name a shortcut " +
+        "base, with `path` as a relative addition onto it.",
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,

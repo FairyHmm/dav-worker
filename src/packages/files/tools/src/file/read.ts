@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "../deps.js";
-import { ok, err, resolvePath } from "../utils.js";
+import { ok, err, resolvePath } from "../utils/index.js";
 import {
   BlockSchema,
   FromSchema,
@@ -15,11 +15,11 @@ export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
     "file_read",
     {
       description:
-        "Read a text file. Returns an error for binary files. Pass `block` " +
-        "with a heading title to read only that section (including nested " +
-        "subheadings), or `from`/`to` for a 1-indexed line range, instead of " +
-        "the whole file. `location` can name a shortcut base, with `path` " +
-        "as a relative addition onto it.",
+        "Read a text file. Returns an error for binary files. `block` " +
+        "targets a markdown heading (its whole subtree); `from`/`to` " +
+        "targets a 1-indexed line range; omit both to read the whole " +
+        "file. `location` can name a shortcut base, with `path` as a " +
+        "relative addition onto it.",
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,
@@ -35,31 +35,10 @@ export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
         const { content } = await client.read(path);
 
         const target = resolveTarget({ block, from, to });
+        if (target.kind === "whole-file") return ok(content);
 
-        switch (target.kind) {
-          case "whole-file":
-            return ok(content);
-          case "markdown": {
-            const result = target.handler.read(content, target.address);
-            if (result === undefined) {
-              return err(
-                new Error(`No heading named "${block}" found in ${path}.`),
-              );
-            }
-            return ok(result);
-          }
-          case "raw": {
-            const result = target.handler.read(content, target.address);
-            if (result === undefined) {
-              return err(
-                new Error(
-                  `Line range ${from}-${to ?? from} is out of bounds in ${path}.`,
-                ),
-              );
-            }
-            return ok(result);
-          }
-        }
+        const result = target.read(content);
+        return result === undefined ? err(new Error(target.notFoundError)) : ok(result);
       } catch (e) {
         return err(e);
       }

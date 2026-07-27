@@ -9,13 +9,12 @@ export const LocationSchema = z
   .string()
   .optional()
   .describe(
-    "Named location shortcut (see Docs/SPEC-LOCATIONS.md), resolved via " +
-      "the aliases/patterns config into a vault-relative base path — e.g. " +
-      "'Nadir/spec' instead of the full underlying path. If `path` is also " +
-      "given, it's joined onto this base as a relative addition (e.g. " +
-      "location='Nadir/spec', path='draft.md' targets 'draft.md' inside " +
-      "that location). Unknown/unmatched locations return a clear error " +
-      "rather than falling back to `path`.",
+    "Named location shortcut, resolved into a vault-relative base path — " +
+      "e.g. 'Nadir/spec' instead of the full underlying path. If `path` " +
+      "is also given, it's joined onto this base (e.g. " +
+      "location='Nadir/spec', path='draft.md' → 'draft.md' inside that " +
+      "location). Unknown locations error rather than falling back to " +
+      "`path`.",
   );
 
 export const BlockSchema = z
@@ -31,9 +30,9 @@ export const ScopeSchema = z
   .optional()
   .default("body")
   .describe(
-    "Only used with `block`. 'body' = just the content directly under the " +
-      "heading, before any subheadings. 'subtree' = the heading line itself " +
-      "plus all nested content and subheadings. Default: 'body'.",
+    "Only used with `block`. 'body' = content directly under the heading " +
+      "only; 'subtree' = the heading plus everything nested under it. " +
+      "Default 'body'.",
   );
 
 export const ModeSchema = z
@@ -41,8 +40,8 @@ export const ModeSchema = z
   .optional()
   .default("replace")
   .describe(
-    "Only used with `block`. 'replace' overwrites the scoped section, " +
-      "'append' adds after it. Default: 'replace'.",
+    "'replace' (default) overwrites the target (whole file, block, or " +
+      "line range). 'append' adds after it instead.",
   );
 
 export const DepthSchema = z

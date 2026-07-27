@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "../deps.js";
-import { ok, err, resolvePath } from "../utils.js";
+import { ok, err, resolvePath } from "../utils/index.js";
 import { PathSchema, LocationSchema } from "../schemas.js";
 
 export function registerStatTool(server: McpServer, deps: FileToolsDeps): void {
