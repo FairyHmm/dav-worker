@@ -4,14 +4,27 @@
 // done in UTC calendar days — no local-timezone reasoning, consistent with
 // ical/component.ts's decision not to carry an IANA tz database.
 
-const PRESET_WINDOWS: Record<string, { from: number; to: number }> = {
-  today: { from: 0, to: 1 },
-  week: { from: 0, to: 7 },
-  month: { from: 0, to: 30 },
-};
-
 function startOfUtcDay(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+// Calendar-boundary windows, not rolling day-offsets: "week" is the
+// Monday–Sunday containing today, "month" is the 1st–last day of the
+// current month. Distinct from the { from, to } numeric-offset shape,
+// which IS rolling (e.g. { from: 0, to: 7 } for "next 7 days").
+function startOfWeek(d: Date): Date {
+  // getUTCDay(): 0=Sun..6=Sat. Shift so Monday is the start.
+  const dow = d.getUTCDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  return addDays(d, diff);
+}
+
+function startOfMonth(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+}
+
+function startOfNextMonth(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
 }
 
 function addDays(d: Date, n: number): Date {
@@ -66,7 +79,9 @@ export function shiftIso(iso: string, ms: number): string {
 export type TimeWindowInput =
   | { from: number; to: number }
   | { from: string; to: string }
-  | keyof typeof PRESET_WINDOWS;
+  | "today"
+  | "week"
+  | "month";
 
 export function resolveTimeWindow(
   time: TimeWindowInput,
@@ -74,15 +89,31 @@ export function resolveTimeWindow(
   const today = startOfUtcDay(new Date());
 
   if (typeof time === "string") {
-    const preset = PRESET_WINDOWS[time];
-    if (!preset) {
-      const known = Object.keys(PRESET_WINDOWS).join(", ");
-      throw new Error(`Unknown time preset "${time}". Known presets: ${known}`);
+    switch (time) {
+      case "today":
+        return {
+          startUtc: toBasicUtc(today),
+          endUtc: toBasicUtc(addDays(today, 1)),
+        };
+      case "week": {
+        const start = startOfWeek(today);
+        return {
+          startUtc: toBasicUtc(start),
+          endUtc: toBasicUtc(addDays(start, 7)),
+        };
+      }
+      case "month": {
+        const start = startOfMonth(today);
+        return {
+          startUtc: toBasicUtc(start),
+          endUtc: toBasicUtc(startOfNextMonth(today)),
+        };
+      }
+      default: {
+        const known = "today, week, month";
+        throw new Error(`Unknown time preset "${time}". Known presets: ${known}`);
+      }
     }
-    return {
-      startUtc: toBasicUtc(addDays(today, preset.from)),
-      endUtc: toBasicUtc(addDays(today, preset.to)),
-    };
   }
 
   const { from, to } = time;
