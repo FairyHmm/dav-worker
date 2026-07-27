@@ -1,25 +1,25 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "./deps.js";
-import { ok, err, resolvePath } from "./utils.js";
+import type { FileToolsDeps } from "../deps.js";
+import { ok, err, resolvePath } from "../utils.js";
 import {
   BlockSchema,
   FromSchema,
   LocationSchema,
   PathSchema,
   ToSchema,
-} from "./schemas.js";
+} from "../schemas.js";
 import { resolveTarget } from "@dav-worker/files-parser";
 
 export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
-    "nc_files_read",
+    "file_read",
     {
       description:
-        "Read a text file from the Nextcloud vault. Returns an error for binary files. " +
-        "Pass `block` with a heading title to read only that heading's section " +
-        "(including its nested subheadings), or `from`/`to` for a 1-indexed line " +
-        "range, instead of the whole file. Pass `location` instead of `path` to " +
-        "use a named location shortcut.",
+        "Read a text file. Returns an error for binary files. Pass `block` " +
+        "with a heading title to read only that section (including nested " +
+        "subheadings), or `from`/`to` for a 1-indexed line range, instead of " +
+        "the whole file. `location` can name a shortcut base, with `path` " +
+        "as a relative addition onto it.",
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,

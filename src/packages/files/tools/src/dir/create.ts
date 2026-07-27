@@ -1,16 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "./deps.js";
-import { ok, err, resolvePath } from "./utils.js";
-import { PathSchema, LocationSchema } from "./schemas.js";
+import type { FileToolsDeps } from "../deps.js";
+import { ok, err, resolvePath } from "../utils.js";
+import { PathSchema, LocationSchema } from "../schemas.js";
 
 export function registerCreateFolderTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
-    "nc_files_mkdir",
+    "dir_create",
     {
       description:
-        "Create a folder in the Nextcloud vault. Succeeds silently if the folder " +
-        "already exists. Pass `location` instead of `path` to use a named " +
-        "location shortcut.",
+        "Create a directory. Succeeds silently if it already exists. " +
+        "`location` can name a shortcut base, with `path` as a relative " +
+        "addition onto it.",
       inputSchema: { path: PathSchema.optional(), location: LocationSchema },
     },
     async ({ path: pathArg, location }) => {

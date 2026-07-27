@@ -10,10 +10,12 @@ export const LocationSchema = z
   .optional()
   .describe(
     "Named location shortcut (see Docs/SPEC-LOCATIONS.md), resolved via " +
-      "the aliases/patterns config into a vault-relative path — e.g. " +
-      "'Nadir/spec' instead of the full underlying path. When provided, " +
-      "takes precedence over `path`. Unknown/unmatched locations return a " +
-      "clear error rather than falling back to `path`.",
+      "the aliases/patterns config into a vault-relative base path — e.g. " +
+      "'Nadir/spec' instead of the full underlying path. If `path` is also " +
+      "given, it's joined onto this base as a relative addition (e.g. " +
+      "location='Nadir/spec', path='draft.md' targets 'draft.md' inside " +
+      "that location). Unknown/unmatched locations return a clear error " +
+      "rather than falling back to `path`.",
   );
 
 export const BlockSchema = z

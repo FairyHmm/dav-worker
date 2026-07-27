@@ -1,18 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "./deps.js";
+import type { FileToolsDeps } from "../deps.js";
 import { outline } from "@dav-worker/files-parser";
-import { ok, err, resolvePath } from "./utils.js";
-import { PathSchema, LocationSchema } from "./schemas.js";
+import { ok, err, resolvePath } from "../utils.js";
+import { PathSchema, LocationSchema } from "../schemas.js";
 
 export function registerOutlineTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
-    "nc_files_outline",
+    "file_outline",
     {
       description:
         "Return the heading structure of a Markdown file as a nested tree " +
         "(level, title, children) without body content. Useful for orienting " +
-        "in a large note before a targeted block read/write. Pass `location` " +
-        "instead of `path` to use a named location shortcut.",
+        "in a large note before a targeted block read/write. `location` can " +
+        "name a shortcut base, with `path` as a relative addition onto it.",
       inputSchema: { path: PathSchema.optional(), location: LocationSchema },
     },
     async ({ path: pathArg, location }) => {

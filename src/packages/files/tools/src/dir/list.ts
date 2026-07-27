@@ -1,16 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "./deps.js";
-import { ok, err, resolvePath } from "./utils.js";
-import { PathSchema, DepthSchema, LocationSchema } from "./schemas.js";
+import type { FileToolsDeps } from "../deps.js";
+import { ok, err, resolvePath } from "../utils.js";
+import { PathSchema, DepthSchema, LocationSchema } from "../schemas.js";
 
 export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
-    "nc_files_list",
+    "dir_list",
     {
       description:
-        "List files and folders at a path in the Nextcloud vault. Use an empty " +
-        "string or '/' for the root. Pass `location` instead of `path` to use " +
-        "a named location shortcut.",
+        "List the contents of a directory. Use an empty string or '/' for " +
+        "the root. `location` can name a shortcut base, with `path` as a " +
+        "relative addition onto it.",
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,

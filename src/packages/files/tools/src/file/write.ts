@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { FileToolsDeps } from "./deps.js";
-import { ok, err, resolvePath } from "./utils.js";
+import type { FileToolsDeps } from "../deps.js";
+import { ok, err, resolvePath } from "../utils.js";
 import {
   BlockSchema,
   FromSchema,
@@ -10,20 +10,20 @@ import {
   PathSchema,
   ScopeSchema,
   ToSchema,
-} from "./schemas.js";
+} from "../schemas.js";
 import { resolveTarget } from "@dav-worker/files-parser";
 
 export function registerWriteTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
-    "nc_files_write",
+    "file_write",
     {
       description:
-        "Write text content to a file in the Nextcloud vault. Without `block` or " +
-        "`from`/`to`, overwrites (or creates) the whole file. With `block`, " +
-        "patches one heading's section (see `scope`/`mode`). With `from`/`to`, " +
-        "patches a 1-indexed line range (see `mode`). `block` and `from`/`to` " +
-        "are mutually exclusive. Pass `location` instead of `path` to use a " +
-        "named location shortcut.",
+        "Write text content to a file. Without `block` or `from`/`to`, " +
+        "overwrites (or creates) the whole file. With `block`, patches one " +
+        "heading's section (see `scope`/`mode`). With `from`/`to`, patches a " +
+        "1-indexed line range (see `mode`). `block` and `from`/`to` are " +
+        "mutually exclusive. `location` can name a shortcut base, with " +
+        "`path` as a relative addition onto it.",
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,

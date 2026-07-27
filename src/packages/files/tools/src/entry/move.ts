@@ -1,22 +1,23 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "./deps.js";
-import { ok, err, resolvePath } from "./utils.js";
+import type { FileToolsDeps } from "../deps.js";
+import { ok, err, resolvePath } from "../utils.js";
 import {
   PathSchema,
   LocationSchema,
   ForceSchema,
   formatConflict,
-} from "./schemas.js";
+} from "../schemas.js";
 
-export function registerCopyTool(server: McpServer, deps: FileToolsDeps): void {
+export function registerMoveTool(server: McpServer, deps: FileToolsDeps): void {
   server.registerTool(
-    "nc_files_copy",
+    "entry_move",
     {
       description:
-        "Copy a file or folder in the Nextcloud vault. " +
-        "By default, refuses to overwrite an existing destination and returns its metadata instead. " +
-        "Set force=true to overwrite without warning. Pass `srcLocation`/`dstLocation` " +
-        "instead of `src`/`dst` to use named location shortcuts.",
+        "Move or rename a file or directory. By default, refuses to " +
+        "overwrite an existing destination and returns its metadata instead " +
+        "— set force=true to overwrite without warning. `srcLocation`/" +
+        "`dstLocation` can each name a shortcut base, with `src`/`dst` as a " +
+        "relative addition onto them.",
       inputSchema: {
         src: PathSchema.describe("Source path").optional(),
         dst: PathSchema.describe("Destination path").optional(),
@@ -30,13 +31,13 @@ export function registerCopyTool(server: McpServer, deps: FileToolsDeps): void {
         const src = resolvePath(deps.config, { path: srcArg, location: srcLocation });
         const dst = resolvePath(deps.config, { path: dstArg, location: dstLocation });
         const client = deps.storage;
-        const result = await client.copy(src, dst, force);
+        const result = await client.move(src, dst, force);
 
-        if (!result.copied) {
+        if (!result.moved) {
           return ok(formatConflict(result.conflict!, "force=true"));
         }
 
-        return ok(`Copied: ${src} → ${dst}`);
+        return ok(`Moved: ${src} → ${dst}`);
       } catch (e) {
         return err(e);
       }
