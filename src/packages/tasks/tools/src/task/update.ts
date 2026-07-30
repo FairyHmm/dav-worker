@@ -5,45 +5,36 @@ import {
   TaskIdSchema,
   TaskTitleSchema,
   ListSchema,
-  EventIdSchema,
-  UnlinkEventSchema,
+  UpdateEventIdSchema,
+  UpdateProgressSchema,
+  PrioritySchema,
+  TagsSchema,
+  UrlSchema,
 } from "../utils/schemas.js";
-import { z } from "zod";
 import { findTaskAcrossLists, formatWarnings } from "../utils/find.js";
 import { applyTaskFields, linkTaskToEvent, unlinkTaskFromEvent } from "../utils/mapping.js";
 import { parseCalendar, findComponent, stringifyCalendar } from "@dav-worker/calendar-ical";
-
-// Deliberately not utils/schemas.ts' StatusSchema: same enum values, but
-// that one is written for task_list's *filter* semantics ("omit to return
-// tasks in all three states"), which would be a misleading description
-// here — this one is for task_update's *new-value* semantics ("omit to
-// leave unchanged"). Same three-value enum, different meaning per call site.
-const NewStatusSchema = z
-  .enum(["progress", "completed", "cancelled"])
-  .optional()
-  .describe("New task status. Omit to leave the current status unchanged.");
 
 export function registerTaskUpdateTool(server: McpServer, deps: TaskToolsDeps): void {
   server.registerTool(
     "task_update",
     {
       description:
-        "Update a task by id, changing only the fields provided. Passing " +
-        "`event_id` links or re-links the task to an event, updating its " +
-        "due date to match. Omitting `event_id` leaves any existing due " +
-        "date and link unchanged. Pass `unlink_event: true` to remove an " +
-        "existing link and clear the due date (ignored if `event_id` is " +
-        "also given). Passing `list` moves the task to a different list.",
+        "Update a task by id, changing only the fields provided: title, " +
+        "progress or cancellation, priority, tags, URL, event link, or " +
+        "list. Fields omitted are left unchanged.",
       inputSchema: {
         id: TaskIdSchema,
         title: TaskTitleSchema.optional(),
-        status: NewStatusSchema,
-        event_id: EventIdSchema,
-        unlink_event: UnlinkEventSchema,
+        progress: UpdateProgressSchema,
+        priority: PrioritySchema,
+        tags: TagsSchema,
+        url: UrlSchema,
+        event_id: UpdateEventIdSchema,
         list: ListSchema.optional(),
       },
     },
-    async ({ id, title, status, event_id, unlink_event, list }) => {
+    async ({ id, title, progress, priority, tags, url, event_id, list }) => {
       // An empty list slug resolves to the calendars home collection
       // itself (davPath(basePath, "") === basePath), not a 404 — same
       // guard as list_create/list_delete/task_create. `list` is optional
@@ -67,13 +58,13 @@ export function registerTaskUpdateTool(server: McpServer, deps: TaskToolsDeps): 
           return err(new Error(`Task ${id}'s iCalendar data has no VTODO.`));
         }
 
-        applyTaskFields(todo, { title, status });
+        applyTaskFields(todo, { title, progress, priority, tags, url });
 
-        if (event_id) {
+        if (event_id === "unlink") {
+          unlinkTaskFromEvent(todo);
+        } else if (event_id) {
           const failure = await linkTaskToEvent(todo, event_id, deps.resolveEventDue, "updated");
           if (failure) return err(new Error(failure));
-        } else if (unlink_event) {
-          unlinkTaskFromEvent(todo);
         }
 
         // Stringify the whole parsed calendar (todo is a live reference

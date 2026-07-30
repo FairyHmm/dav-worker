@@ -18,6 +18,10 @@ export const TaskTitleSchema = z.string().describe("Task title.");
 // No direct `due` input (SPEC-TASKS.md) — a task's date always comes from
 // its linked event via `event_id`. Genuinely undated, unlinked tasks
 // belong in Markdown, not here.
+//
+// task_create's shape: string only (no unlink concept — nothing to
+// unlink on a brand-new task). task_update reuses the base string schema
+// via UpdateEventIdSchema below, adding the "unlink" literal.
 export const EventIdSchema = z
   .string()
   .optional()
@@ -31,19 +35,21 @@ export const TaskIdSchema = z
   .string()
   .describe("The task's id, as returned by task_list/task_create.");
 
-// Beyond SPEC-TASKS.md's documented surface: previously there was no way
-// to remove an existing event_id link short of delete-and-recreate under a
-// new UID. `event_id` alone can only set/replace a link, never clear one
-// (omitting it just leaves the existing link untouched) — this is the
-// dedicated clear path, mutually exclusive with passing `event_id` in the
-// same call.
-export const UnlinkEventSchema = z
-  .boolean()
+// task_update's variant of EventIdSchema: previously there was no way to
+// remove an existing event_id link short of delete-and-recreate under a
+// new UID, and the fix for that (a separate `unlink_event` boolean) had
+// its own problem — it could be passed alongside a real `event_id` in the
+// same call, an ambiguous combination that had to be resolved by fiat
+// ("event_id wins"). Folding "unlink" into this field's own value space
+// makes that combination impossible to express instead of merely resolved.
+export const UpdateEventIdSchema = z
+  .union([z.string(), z.literal("unlink")])
   .optional()
   .describe(
-    "If true, removes any existing event link (RELATED-TO) and clears the " +
-      "task's due date, since due only ever comes from a linked event. " +
-      "Ignored if `event_id` is also provided in the same call.",
+    "Id of an external event to link this task to (its start becomes this " +
+      "task's DUE, one-shot copy, and a RELATED-TO is written), or the " +
+      "literal string 'unlink' to remove an existing link and clear the " +
+      "due date. Omit to leave any existing link/due date untouched.",
   );
 
 export const DueFilterSchema = z
@@ -74,4 +80,52 @@ export const SortSchema = z
   .describe(
     "Sort order: 'due' (ascending, earliest first) or 'completion' " +
       "(PERCENT-COMPLETE, ascending). Omit for list-storage order.",
+  );
+
+// task_update's new-value field, separate from StatusSchema above (that
+// one is task_list's *filter* enum, which needs three coarse buckets —
+// "in progress" isn't given percent granularity there because nobody
+// filters for an exact percent). This one is a single field rather than
+// separate `cancelled`/`progress` fields: those two were genuinely
+// mutually exclusive in practice (progress is never touched once a task
+// is cancelled), so having them as separate params meant an ambiguous
+// combination (both passed at once) had to be resolved by fiat instead of
+// simply being inexpressible.
+export const UpdateProgressSchema = z
+  .union([z.number().min(0).max(100), z.literal("cancelled")])
+  .optional()
+  .describe(
+    "Either a completion percentage (0-100, maps to PERCENT-COMPLETE; " +
+      "reaching 100 also marks STATUS as COMPLETED), or the literal string " +
+      "'cancelled' to mark the task cancelled. Omit to leave unchanged.",
+  );
+
+export const PrioritySchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(9)
+  .optional()
+  .describe(
+    "Priority 0-9 per RFC 5545 (0 = undefined/none, 1 = highest, 9 = lowest). " +
+      "Omit to leave unchanged.",
+  );
+
+export const TagsSchema = z
+  .array(z.string())
+  .optional()
+  .describe(
+    "Tags to add or remove from CATEGORIES, merged against the task's " +
+      "existing tags. A plain string adds it (if not already present); a " +
+      "string prefixed with '-' removes it (e.g. '-urgent'). Omit to leave " +
+      "tags unchanged.",
+  );
+
+export const UrlSchema = z
+  .string()
+  .optional()
+  .describe(
+    "Sets the task's URL (RFC 5545 URL property) — e.g. a link to a " +
+      "Nextcloud Notes entry. Pass an empty string to clear it. Omit to " +
+      "leave unchanged.",
   );

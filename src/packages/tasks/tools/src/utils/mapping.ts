@@ -7,6 +7,8 @@ import {
   removeProperty,
   getDateTime,
   setDateTime,
+  getTextList,
+  setTextList,
   nowStamp,
   findAllComponents,
   basicToIso,
@@ -19,11 +21,13 @@ import {
 // calendar/tools does, without depending on calendar-contracts.
 
 // Frontend-facing status name, collapsing CalDAV's four STATUS values
-// into three (SPEC-TASKS.md): NEEDS-ACTION/IN-PROCESS both read as
-// "progress" (an unset PERCENT-COMPLETE is just the start of "in
-// progress" — no meaningful frontend distinction). Write side is
-// one-directional: "progress" always writes IN-PROCESS, never
-// NEEDS-ACTION — that only ever arises as a VTODO's initial unset state.
+// into three (SPEC-TASKS.md, task_list's filter semantics): NEEDS-ACTION/
+// IN-PROCESS both read as "progress" (an unset PERCENT-COMPLETE is just
+// the start of "in progress" — no meaningful frontend distinction).
+// Retained for task_list filtering only — task_update's *write* side no
+// longer uses this 3-way enum (see writeCancelled/writeProgress below):
+// cancelled and completion-percent are independent axes there, not a
+// single tri-state.
 export type TaskStatus = "progress" | "completed" | "cancelled";
 
 export function readStatus(todo: ICalComponent): TaskStatus | undefined {
@@ -34,20 +38,55 @@ export function readStatus(todo: ICalComponent): TaskStatus | undefined {
   return undefined;
 }
 
-export function writeStatus(todo: ICalComponent, status: TaskStatus): void {
-  if (status === "progress") {
-    setText(todo, "STATUS", "IN-PROCESS");
-  } else if (status === "completed") {
-    setText(todo, "STATUS", "COMPLETED");
-    setText(todo, "PERCENT-COMPLETE", "100");
-  } else {
+// task_update's write-side replacement for the old 3-way writeStatus.
+// Progress and cancellation are mutually exclusive in practice (progress
+// is never touched once a task is cancelled), so this takes one value
+// rather than two separate params — see UpdateProgressSchema. Reaching
+// 100 still sets STATUS=COMPLETED as a natural consequence of "fully
+// done", not a separately-passed state.
+export function writeProgress(todo: ICalComponent, progress: number | "cancelled"): void {
+  if (progress === "cancelled") {
     setText(todo, "STATUS", "CANCELLED");
+    return;
+  }
+  setText(todo, "PERCENT-COMPLETE", String(progress));
+  setText(todo, "STATUS", progress === 100 ? "COMPLETED" : "IN-PROCESS");
+}
+
+export function writePriority(todo: ICalComponent, priority: number): void {
+  setText(todo, "PRIORITY", String(priority));
+}
+
+// Merges `tags` against the task's existing CATEGORIES: a plain string
+// adds it (deduped), a "-"-prefixed string removes it. Order: removals
+// then additions, so "-x", "x" in the same call nets to "x" present
+// (add wins over remove when both target the same tag in one call).
+export function applyTagChanges(todo: ICalComponent, tags: string[]): void {
+  const current = new Set(getTextList(todo, "CATEGORIES"));
+  for (const tag of tags) {
+    if (tag.startsWith("-")) current.delete(tag.slice(1));
+  }
+  for (const tag of tags) {
+    if (!tag.startsWith("-")) current.add(tag);
+  }
+  setTextList(todo, "CATEGORIES", [...current]);
+}
+
+export function writeUrl(todo: ICalComponent, url: string): void {
+  if (url === "") {
+    removeProperty(todo, "URL");
+  } else {
+    setText(todo, "URL", url);
   }
 }
 
 export interface TaskFields {
   title?: string;
   eventId?: string;
+  progress?: number | "cancelled";
+  priority?: number;
+  tags?: string[];
+  url?: string;
 }
 
 // `due` isn't part of TaskFields' direct input — it's set separately by
@@ -112,10 +151,19 @@ export async function linkTaskToEvent(
 // RELATED-TO, both storage-adjacent concerns this pure mapper shouldn't own).
 export function applyTaskFields(
   todo: ICalComponent,
-  fields: { title?: string; status?: TaskStatus },
+  fields: {
+    title?: string;
+    progress?: number | "cancelled";
+    priority?: number;
+    tags?: string[];
+    url?: string;
+  },
 ): void {
   if (fields.title !== undefined) setText(todo, "SUMMARY", fields.title);
-  if (fields.status !== undefined) writeStatus(todo, fields.status);
+  if (fields.progress !== undefined) writeProgress(todo, fields.progress);
+  if (fields.priority !== undefined) writePriority(todo, fields.priority);
+  if (fields.tags !== undefined) applyTagChanges(todo, fields.tags);
+  if (fields.url !== undefined) writeUrl(todo, fields.url);
 
   const stamp = nowStamp();
   todo.properties["DTSTAMP"] = [{ value: stamp, params: {} }];
@@ -129,11 +177,16 @@ export interface TaskSummary {
   eventId?: string;
   status?: TaskStatus;
   percentComplete?: number;
+  priority?: number;
+  tags?: string[];
+  url?: string;
 }
 
 function summarizeVtodo(vtodo: ICalComponent): TaskSummary {
   const due = getDateTime(vtodo, "DUE");
   const percentRaw = getText(vtodo, "PERCENT-COMPLETE");
+  const priorityRaw = getText(vtodo, "PRIORITY");
+  const tags = getTextList(vtodo, "CATEGORIES");
   return {
     uid: getText(vtodo, "UID") ?? "",
     title: getText(vtodo, "SUMMARY") ?? "",
@@ -141,6 +194,9 @@ function summarizeVtodo(vtodo: ICalComponent): TaskSummary {
     eventId: getText(vtodo, "RELATED-TO"),
     status: readStatus(vtodo),
     percentComplete: percentRaw ? Number(percentRaw) : undefined,
+    priority: priorityRaw ? Number(priorityRaw) : undefined,
+    tags: tags.length > 0 ? tags : undefined,
+    url: getText(vtodo, "URL"),
   };
 }
 
