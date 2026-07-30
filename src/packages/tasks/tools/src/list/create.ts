@@ -37,10 +37,14 @@ export function registerListCreateTool(server: McpServer, deps: TaskToolsDeps): 
         await deps.storage.listCreate(slug);
         return ok(`Created task list "${slug}".`);
       } catch (e) {
-        // No pre-check — MKCALENDAR on an existing collection path fails
-        // naturally (405/409-class). Rewrap that specific case into an
-        // actionable message; everything else passes through unrewrapped
-        // (SPEC-TASKS.md).
+        // No pre-check — MKCOL on an existing collection path fails
+        // naturally (405/409-class). storage.listCreate already
+        // disambiguates the trashbin case (a real <deleted-calendar/>
+        // marker, confirmed via a follow-up PROPFIND) and throws a plain
+        // Error with its own actionable message for that — pass that
+        // through unrewrapped. What's left as a genuine WebDAVHttpError
+        // 405/409 here is the live-collision case, which is unambiguous:
+        // rewrap only that into "already exists" (SPEC-TASKS.md).
         if (e instanceof WebDAVHttpError && (e.status === 405 || e.status === 409)) {
           return err(new Error(`Task list "${slug}" already exists.`));
         }
