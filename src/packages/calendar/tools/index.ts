@@ -10,7 +10,20 @@ export type { CalendarToolsDeps } from "./src/deps.js";
 // TODO-MONOREPO 9e: config parsing exposed publicly so app/worker (and
 // eventually app/local) can fetch the session's calendars.toml at runtime
 // and hand the parsed result into CalendarToolsDeps.config.
-export { parseCalendarConfig, type CalendarConfig } from "./src/calendars.js";
+export { parseCalendarConfig, allCalendarNames, type CalendarConfig } from "./src/calendars.js";
+// Exported for app/worker's resolveEventDue (tasks/tools' one sanctioned
+// cross-domain edge, SPEC-MONOREPO.md A.7) — app/worker is the sole wiring
+// point and is allowed to depend on calendar/tools directly; this reuses
+// the same cross-calendar UID search that schedule_update/delete use
+// internally rather than duplicating it or living in its own package.
+export { findEventAcrossCalendars, formatWarnings } from "./src/utils/find.js";
+// Exported alongside findEventAcrossCalendars for the same reason: a
+// resolved event's calendar-data can hold a recurring master plus detached
+// RECURRENCE-ID overrides as sibling VEVENTs in one resource. app/worker's
+// resolveEventDue needs the master's DTSTART specifically, not whichever
+// VEVENT parses first — same distinction schedule_update/delete already
+// make internally.
+export { findMasterEvent } from "./src/utils/mapping.js";
 
 // Public entry point for this package (SPEC-MONOREPO.md A.5): takes only
 // CalendarToolsDeps (a CalendarStorage implementation), never a platform

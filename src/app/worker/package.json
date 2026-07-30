@@ -6,6 +6,8 @@
   "main": "./index.ts",
   "dependencies": {
     "@dav-worker/calendar-tools": "workspace:*",
+    "@dav-worker/calendar-ical": "workspace:*",
+    "@dav-worker/task-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",

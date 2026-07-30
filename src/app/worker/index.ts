@@ -1,11 +1,14 @@
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
-import { registerCalendarTools, parseCalendarConfig } from "@dav-worker/calendar-tools";
+import { registerCalendarTools, parseCalendarConfig, findEventAcrossCalendars, findMasterEvent } from "@dav-worker/calendar-tools";
+import { registerTaskTools } from "@dav-worker/task-tools";
 import { parseFilesConfig } from "@dav-worker/files-locations";
+import { parseCalendar, findAllComponents, getDateTime, basicToIso } from "@dav-worker/calendar-ical";
 import {
   createNextcloudWebDAVStorage,
   createNextcloudCalDAVStorage,
+  createNextcloudCalDAVTaskStorage,
   WebDAVHttpError,
 } from "@dav-worker/storage-nextcloud";
 import { handleAuthorize, exchangeCode } from "./consent.js";
@@ -51,6 +54,7 @@ async function createServer(props: SessionProps): Promise<McpServer> {
 
   const fileStorage = createNextcloudWebDAVStorage(props.credential);
   const calendarStorage = createNextcloudCalDAVStorage(props.credential);
+  const taskStorage = createNextcloudCalDAVTaskStorage(props.credential);
 
   const [locationsContent, calendarsContent] = await Promise.all([
     loadConfig(props.configs.locations, defaultLocationsToml, fileStorage),
@@ -59,8 +63,34 @@ async function createServer(props: SessionProps): Promise<McpServer> {
   const filesConfig = parseFilesConfig(locationsContent);
   const calendarConfig = parseCalendarConfig(calendarsContent);
 
+  // resolveEventDue is the one sanctioned cross-domain edge into calendar
+  // data (SPEC-MONOREPO.md A.7, tasks/tools/src/deps.ts): task_create/
+  // task_update ask "what's this event's due-equivalent start?" given only
+  // an event UID (no calendar name), so this must search across all
+  // configured calendars, then pull DTSTART out of the matched VEVENT.
+  // Reuses calendar/tools' findEventAcrossCalendars/findMasterEvent
+  // (exported publicly for exactly this) rather than duplicating the
+  // cross-calendar UID search or splitting it into its own package —
+  // app/worker is the sole wiring point and is allowed to depend on
+  // calendar/tools directly. findMasterEvent matters because a resolved
+  // event's calendar-data can hold a recurring master plus detached
+  // RECURRENCE-ID overrides as sibling VEVENTs — DTSTART must come from
+  // the master, not whichever VEVENT parses first.
+  const resolveEventDue = async (eventId: string): Promise<string | null> => {
+    const { found } = await findEventAcrossCalendars(calendarStorage, calendarConfig, "VEVENT", eventId);
+    if (!found?.entry.calendarData) return null;
+    const cal = parseCalendar(found.entry.calendarData);
+    const events = findAllComponents(cal, "VEVENT");
+    const master = findMasterEvent(events) ?? events[0];
+    if (!master) return null;
+    const dt = getDateTime(master, "DTSTART");
+    if (!dt) return null;
+    return basicToIso(dt.raw);
+  };
+
   registerFileTools(server, { storage: fileStorage, config: filesConfig });
   registerCalendarTools(server, { storage: calendarStorage, config: calendarConfig });
+  registerTaskTools(server, { storage: taskStorage, resolveEventDue });
 
   return server;
 }

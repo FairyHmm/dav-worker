@@ -12,9 +12,15 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
-import { registerCalendarTools, parseCalendarConfig } from "@dav-worker/calendar-tools";
+import { registerCalendarTools, parseCalendarConfig, findEventAcrossCalendars, findMasterEvent } from "@dav-worker/calendar-tools";
+import { registerTaskTools } from "@dav-worker/task-tools";
 import { parseFilesConfig } from "@dav-worker/files-locations";
-import { createNextcloudWebDAVStorage, createNextcloudCalDAVStorage } from "@dav-worker/storage-nextcloud";
+import { parseCalendar, findAllComponents, getDateTime, basicToIso } from "@dav-worker/calendar-ical";
+import {
+  createNextcloudWebDAVStorage,
+  createNextcloudCalDAVStorage,
+  createNextcloudCalDAVTaskStorage,
+} from "@dav-worker/storage-nextcloud";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -56,6 +62,7 @@ async function main(): Promise<void> {
   };
   const fileStorage = createNextcloudWebDAVStorage(credential);
   const calendarStorage = createNextcloudCalDAVStorage(credential);
+  const taskStorage = createNextcloudCalDAVTaskStorage(credential);
 
   const [locationsContent, calendarsContent] = await Promise.all([
     loadConfig("LOCATIONS_CONFIG_PATH", "locations.toml", fileStorage),
@@ -64,9 +71,24 @@ async function main(): Promise<void> {
   const filesConfig = parseFilesConfig(locationsContent);
   const calendarConfig = parseCalendarConfig(calendarsContent);
 
+  // Mirrors app/worker/index.ts's resolveEventDue exactly — see that
+  // file's comment for the full rationale (SPEC-MONOREPO.md A.7).
+  const resolveEventDue = async (eventId: string): Promise<string | null> => {
+    const { found } = await findEventAcrossCalendars(calendarStorage, calendarConfig, "VEVENT", eventId);
+    if (!found?.entry.calendarData) return null;
+    const cal = parseCalendar(found.entry.calendarData);
+    const events = findAllComponents(cal, "VEVENT");
+    const master = findMasterEvent(events) ?? events[0];
+    if (!master) return null;
+    const dt = getDateTime(master, "DTSTART");
+    if (!dt) return null;
+    return basicToIso(dt.raw);
+  };
+
   const server = new McpServer({ name: "dav-worker-local", version: "0.1.0" });
   registerFileTools(server, { storage: fileStorage, config: filesConfig });
   registerCalendarTools(server, { storage: calendarStorage, config: calendarConfig });
+  registerTaskTools(server, { storage: taskStorage, resolveEventDue });
 
   await server.connect(new StdioServerTransport());
 }

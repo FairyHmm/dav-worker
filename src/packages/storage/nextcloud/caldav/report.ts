@@ -6,7 +6,34 @@
 import { xmlParser, decodeMissedNumericEntities } from "@dav-worker/clients-webdav";
 import type { ComponentType, ReportEntry } from "@dav-worker/calendar-contracts";
 
-function xmlEscape(value: string): string {
+// PROPFIND body for listing collections under a calendars home (basePath),
+// CalDAV-flavored: adds supported-calendar-component-set to the generic
+// clients-webdav PROPFIND_BODY's props (resourcetype/displayname/etc).
+// Nextcloud's calendars home mixes VEVENT calendars and VTODO-only task
+// lists as sibling collections with no other distinguishing prop — this is
+// the only way to tell which is which without opening each one.
+export const CALDAV_COLLECTION_PROPFIND_BODY = `<?xml version="1.0"?>
+<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop>
+    <d:resourcetype/>
+    <d:displayname/>
+    <c:supported-calendar-component-set/>
+  </d:prop>
+</d:propfind>`;
+
+// True if a collection's supported-calendar-component-set advertises the
+// given component type. fast-xml-parser renders repeated <c:comp/>
+// elements as either a single object or an array depending on count, so
+// this normalizes both shapes the same way mergedProps'/isCollection's
+// callers already do for other multi-valued props.
+export function supportsComponent(prop: any, componentType: ComponentType): boolean {
+  const compSet = prop?.["supported-calendar-component-set"];
+  if (!compSet) return false;
+  const comps: any[] = [].concat(compSet.comp ?? []);
+  return comps.some((c) => c?.["@_name"] === componentType);
+}
+
+export function xmlEscape(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -29,6 +56,23 @@ export function uidQueryBody(componentType: ComponentType, uid: string): string 
           <c:text-match>${xmlEscape(uid)}</c:text-match>
         </c:prop-filter>
       </c:comp-filter>
+    </c:comp-filter>
+  </c:filter>
+</c:calendar-query>`;
+}
+
+// Unfiltered listing of every component of a given type in a collection —
+// used by task_list (no time-range concept for VTODO, unlike listByTimeRange).
+export function listAllQueryBody(componentType: ComponentType): string {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop>
+    <d:getetag/>
+    <c:calendar-data/>
+  </d:prop>
+  <c:filter>
+    <c:comp-filter name="VCALENDAR">
+      <c:comp-filter name="${componentType}"/>
     </c:comp-filter>
   </c:filter>
 </c:calendar-query>`;

@@ -29,6 +29,9 @@ importers:
 
   src/app/local:
     dependencies:
+      '@dav-worker/calendar-ical':
+        specifier: workspace:*
+        version: link:../../packages/calendar/ical
       '@dav-worker/calendar-tools':
         specifier: workspace:*
         version: link:../../packages/calendar/tools
@@ -41,6 +44,9 @@ importers:
       '@dav-worker/storage-nextcloud':
         specifier: workspace:*
         version: link:../../packages/storage/nextcloud
+      '@dav-worker/task-tools':
+        specifier: workspace:*
+        version: link:../../packages/tasks/tools
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -54,6 +60,9 @@ importers:
 
   src/app/worker:
     dependencies:
+      '@dav-worker/calendar-ical':
+        specifier: workspace:*
+        version: link:../../packages/calendar/ical
       '@dav-worker/calendar-tools':
         specifier: workspace:*
         version: link:../../packages/calendar/tools
@@ -66,6 +75,9 @@ importers:
       '@dav-worker/storage-nextcloud':
         specifier: workspace:*
         version: link:../../packages/storage/nextcloud
+      '@dav-worker/task-tools':
+        specifier: workspace:*
+        version: link:../../packages/tasks/tools
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -163,12 +175,39 @@ importers:
       '@dav-worker/calendar-contracts':
         specifier: workspace:*
         version: link:../../calendar/contracts
+      '@dav-worker/calendar-ical':
+        specifier: workspace:*
+        version: link:../../calendar/ical
       '@dav-worker/clients-webdav':
         specifier: workspace:*
         version: link:../../clients/webdav
       '@dav-worker/files-contracts':
         specifier: workspace:*
         version: link:../../files/contracts
+      '@dav-worker/task-contracts':
+        specifier: workspace:*
+        version: link:../../tasks/contracts
+
+  src/packages/tasks/contracts: {}
+
+  src/packages/tasks/tools:
+    dependencies:
+      '@dav-worker/calendar-ical':
+        specifier: workspace:*
+        version: link:../../calendar/ical
+      '@dav-worker/clients-webdav':
+        specifier: workspace:*
+        version: link:../../clients/webdav
+      '@dav-worker/task-contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
 packages:
 
