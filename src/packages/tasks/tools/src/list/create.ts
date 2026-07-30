@@ -23,6 +23,16 @@ export function registerListCreateTool(server: McpServer, deps: TaskToolsDeps): 
     },
     async ({ name }) => {
       const slug = slugify(name);
+      // A name that's entirely non-alphanumeric (e.g. "!!!") slugifies to
+      // "". davPath(basePath, "") resolves to basePath itself (the
+      // calendars home collection), not a 404 — so this must be rejected
+      // before it ever reaches storage, or list_create/list_delete could
+      // target the account's calendars root instead of a real list.
+      if (slug === "") {
+        return err(
+          new Error(`"${name}" has no usable characters for a list name. Use letters or numbers.`),
+        );
+      }
       try {
         await deps.storage.listCreate(slug);
         return ok(`Created task list "${slug}".`);

@@ -13,6 +13,13 @@ export function registerListDeleteTool(server: McpServer, deps: TaskToolsDeps): 
       inputSchema: { list: ListSchema },
     },
     async ({ list }) => {
+      // Same reasoning as list_create: an empty slug resolves to the
+      // calendars home collection itself (davPath(basePath, "") ===
+      // basePath), not a 404 — reject it here rather than letting it
+      // reach storage.listDelete.
+      if (list === "") {
+        return err(new Error("A task list slug is required."));
+      }
       try {
         await deps.storage.listDelete(list);
         return ok(`Deleted task list "${list}".`);

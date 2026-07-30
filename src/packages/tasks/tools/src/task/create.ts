@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { TaskToolsDeps } from "../deps.js";
 import { ok, err } from "../utils.js";
 import { TaskTitleSchema, ListSchema, EventIdSchema } from "../utils/schemas.js";
-import { buildTaskComponent, setTaskDue, setTaskRelatedTo } from "../utils/mapping.js";
+import { buildTaskComponent, linkTaskToEvent } from "../utils/mapping.js";
 import { wrapInCalendar, stringifyCalendar } from "@dav-worker/calendar-ical";
 
 export function registerTaskCreateTool(server: McpServer, deps: TaskToolsDeps): void {
@@ -20,21 +20,19 @@ export function registerTaskCreateTool(server: McpServer, deps: TaskToolsDeps): 
       },
     },
     async ({ title, list, event_id }) => {
+      // An empty list slug resolves to the calendars home collection
+      // itself (davPath(basePath, "") === basePath), not a 404 — same
+      // guard as list_create/list_delete.
+      if (list === "") {
+        return err(new Error("A task list slug is required."));
+      }
       try {
         const uid = crypto.randomUUID();
         const todo = buildTaskComponent(uid, { title });
 
         if (event_id) {
-          const due = await deps.resolveEventDue(event_id);
-          // Fail closed: an explicit event link that can't be resolved is
-          // surprising to silently downgrade into a standalone task. The
-          // caller can retry without event_id if that's actually what
-          // they want (SPEC-TASKS.md).
-          if (due === null) {
-            return err(new Error(`Event "${event_id}" not found — no task created.`));
-          }
-          setTaskDue(todo, due);
-          setTaskRelatedTo(todo, event_id);
+          const failure = await linkTaskToEvent(todo, event_id, deps.resolveEventDue, "created");
+          if (failure) return err(new Error(failure));
         }
 
         const ics = stringifyCalendar(wrapInCalendar(todo));

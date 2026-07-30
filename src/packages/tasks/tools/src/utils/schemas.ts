@@ -31,6 +31,21 @@ export const TaskIdSchema = z
   .string()
   .describe("The task's id, as returned by task_list/task_create.");
 
+// Beyond SPEC-TASKS.md's documented surface: previously there was no way
+// to remove an existing event_id link short of delete-and-recreate under a
+// new UID. `event_id` alone can only set/replace a link, never clear one
+// (omitting it just leaves the existing link untouched) — this is the
+// dedicated clear path, mutually exclusive with passing `event_id` in the
+// same call.
+export const UnlinkEventSchema = z
+  .boolean()
+  .optional()
+  .describe(
+    "If true, removes any existing event link (RELATED-TO) and clears the " +
+      "task's due date, since due only ever comes from a linked event. " +
+      "Ignored if `event_id` is also provided in the same call.",
+  );
+
 export const DueFilterSchema = z
   .union([
     z.object({ from: z.number(), to: z.number() }),

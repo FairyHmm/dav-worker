@@ -4,6 +4,7 @@ import {
   newTodo,
   getText,
   setText,
+  removeProperty,
   getDateTime,
   setDateTime,
   nowStamp,
@@ -68,6 +69,41 @@ export function setTaskDue(todo: ICalComponent, due: string): void {
 
 export function setTaskRelatedTo(todo: ICalComponent, eventId: string): void {
   setText(todo, "RELATED-TO", eventId);
+}
+
+// Beyond SPEC-TASKS.md's documented behavior: once a task is linked, there
+// was previously no way to unlink it short of delete-and-recreate under a
+// new UID (losing status/history). Clears RELATED-TO and DUE together —
+// DUE's only source is a linked event (SPEC-TASKS.md: "no direct due
+// input"), so a task with no link has no principled DUE value to keep
+// either; leaving a stale DUE around after unlinking would misrepresent
+// where that date came from.
+export function unlinkTaskFromEvent(todo: ICalComponent): void {
+  removeProperty(todo, "RELATED-TO");
+  removeProperty(todo, "DUE");
+}
+
+// Shared by task_create/task_update: resolve an event_id via
+// resolveEventDue and apply DUE + RELATED-TO to `todo`, or return a
+// message describing why it failed (caller wraps that in err()). Fail
+// closed either way — an explicit event link that can't be resolved
+// shouldn't silently downgrade into a standalone task (SPEC-TASKS.md).
+// `verb` only changes the wording ("no task created" vs "task not
+// updated") between the two call sites.
+export async function linkTaskToEvent(
+  todo: ICalComponent,
+  eventId: string,
+  resolveEventDue: (eventId: string) => Promise<string | null>,
+  verb: "created" | "updated",
+): Promise<string | null> {
+  const due = await resolveEventDue(eventId);
+  if (due === null) {
+    const outcome = verb === "created" ? "no task created" : "task not updated";
+    return `Event "${eventId}" not found — ${outcome}.`;
+  }
+  setTaskDue(todo, due);
+  setTaskRelatedTo(todo, eventId);
+  return null;
 }
 
 // Applies only the fields present in `fields` (undefined = leave as-is),
