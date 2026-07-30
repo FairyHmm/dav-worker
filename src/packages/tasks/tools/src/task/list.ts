@@ -12,9 +12,8 @@ export function registerTaskListTool(server: McpServer, deps: TaskToolsDeps): vo
     "task_list",
     {
       description:
-        "List tasks. Omit `list` to search every task list. Pass `event_id` to " +
-        "filter to tasks linked to that event, `due` to filter by due date, " +
-        "`status` to filter by state, and `sort` to order the results.",
+        "List tasks, optionally filtered by list, linked event, due date, " +
+        "or status, and optionally sorted by due date or completion.",
       inputSchema: {
         list: ListSchema.optional(),
         event_id: EventIdSchema,

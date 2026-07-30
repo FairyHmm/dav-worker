@@ -18,9 +18,7 @@ export function registerListCreateTool(server: McpServer, deps: TaskToolsDeps): 
     "list_create",
     {
       description:
-        "Create a new task list — a dedicated VTODO-only CalDAV collection, " +
-        "distinct from event calendars. `name` is slugified into the id used " +
-        "by task_create/task_list's `list` param and list_delete.",
+        "Create a new task list, separate from event calendars.",
       inputSchema: { name: ListNameSchema },
     },
     async ({ name }) => {

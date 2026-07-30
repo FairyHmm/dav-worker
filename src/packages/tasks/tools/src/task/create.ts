@@ -10,11 +10,9 @@ export function registerTaskCreateTool(server: McpServer, deps: TaskToolsDeps): 
     "task_create",
     {
       description:
-        "Create a task in a task list. Optionally pass `event_id` to link it to " +
-        "an event — its start is copied in as this task's due date (one-shot, " +
-        "not live-synced) and a RELATED-TO is written. There is no direct `due` " +
-        "input: a task's date only ever comes from a linked event. Genuinely " +
-        "undated, unlinked tasks belong in Markdown files, not here.",
+        "Create a task in a task list. Optionally link it to an event via " +
+        "`event_id`, which gives the task a due date matching the event's " +
+        "start. There is no direct way to set a due date otherwise.",
       inputSchema: {
         title: TaskTitleSchema,
         list: ListSchema,

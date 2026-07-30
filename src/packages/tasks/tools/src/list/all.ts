@@ -7,9 +7,7 @@ export function registerListAllTool(server: McpServer, deps: TaskToolsDeps): voi
     "list_all",
     {
       description:
-        "List all existing task lists (slug + display name). This is the " +
-        "source of truth for valid `list` values on task_create/task_list — " +
-        "there is no separate config file mapping names to slugs.",
+        "List all existing task lists.",
       inputSchema: {},
     },
     async () => {
