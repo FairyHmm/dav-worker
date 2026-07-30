@@ -25,6 +25,7 @@ import {
   parseReportResponses,
   CALDAV_COLLECTION_PROPFIND_BODY,
   supportsComponent,
+  isDeletedCalendar,
   xmlEscape,
 } from "./report.js";
 
@@ -139,7 +140,9 @@ export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskSt
         .slice(1)
         .filter((r) => {
           const prop = mergedProps(r);
-          return isCollection(prop) && supportsComponent(prop, "VTODO");
+          return (
+            isCollection(prop) && supportsComponent(prop, "VTODO") && !isDeletedCalendar(prop)
+          );
         })
         .map((r) => {
           const decodedHref = decodeURIComponent(String(r.href ?? "").replace(/\/$/, ""));

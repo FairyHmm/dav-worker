@@ -3,6 +3,8 @@ import type { TaskToolsDeps } from "./src/deps.js";
 import { registerTaskCreateTool } from "./src/task/create.js";
 import { registerTaskListTool } from "./src/task/list.js";
 import { registerListCreateTool } from "./src/list/create.js";
+import { registerListDeleteTool } from "./src/list/delete.js";
+import { registerListAllTool } from "./src/list/all.js";
 
 export type { TaskToolsDeps } from "./src/deps.js";
 
@@ -12,6 +14,8 @@ export type { TaskToolsDeps } from "./src/deps.js";
 // and app/local can both call this with their own conforming storage.
 export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void {
   registerListCreateTool(server, deps);
+  registerListDeleteTool(server, deps);
+  registerListAllTool(server, deps);
   registerTaskCreateTool(server, deps);
   registerTaskListTool(server, deps);
 }

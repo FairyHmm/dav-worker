@@ -33,6 +33,18 @@ export function supportsComponent(prop: any, componentType: ComponentType): bool
   return comps.some((c) => c?.["@_name"] === componentType);
 }
 
+// True if a collection is Nextcloud's soft-deleted state (moved to its
+// server-side calendar trash, not yet purged) — resourcetype carries a
+// nextcloud.com-namespaced <deleted-calendar/> marker alongside the normal
+// <collection/> one, and the collection otherwise still answers PROPFIND/
+// REPORT/DELETE as if it existed. listAll() needs to exclude these, or a
+// list_delete'd task list keeps reappearing until Nextcloud's trash purge
+// runs (same removeNSPrefix normalization as isCollection's "collection"
+// check — the nextcloud.com prefix is stripped, so the bare key is used).
+export function isDeletedCalendar(prop: any): boolean {
+  return !!prop?.resourcetype && "deleted-calendar" in prop.resourcetype;
+}
+
 export function xmlEscape(value: string): string {
   return value
     .replace(/&/g, "&amp;")
