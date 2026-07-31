@@ -1,4 +1,4 @@
-import { readBlock, writeBlock, type WriteMode } from "./markdown/index.js";
+import { readBlock, readBody, writeBlock, type WriteMode } from "./markdown/index.js";
 import { read as readRaw, write as writeRaw, type RawAddress } from "./raw/index.js";
 
 // Wearable by any future format (tree-sitter, json, etc.) without the tool
@@ -13,13 +13,16 @@ export interface MarkdownAddress {
 	scope: "body" | "subtree";
 }
 
-// Wraps the existing readBlock/writeBlock free functions to wear
-// FormatHandler<MarkdownAddress>. readBlock always returns the full
-// subtree regardless of `scope` — scope only affects write — so it's
-// accepted on the address but unused on read.
+// Wraps the existing readBlock/readBody/writeBlock free functions to wear
+// FormatHandler<MarkdownAddress>. `scope` picks between the two read
+// functions the same way it already picks write behavior — "body" returns
+// only the content directly under the heading (readBody), "subtree"
+// returns the heading plus everything nested under it (readBlock).
 export const markdownHandler: FormatHandler<MarkdownAddress> = {
 	read(source, address) {
-		return readBlock(source, address.heading);
+		return address.scope === "subtree"
+			? readBlock(source, address.heading)
+			: readBody(source, address.heading);
 	},
 	write(source, address, content, mode) {
 		return writeBlock(source, address.heading, content, address.scope, mode);

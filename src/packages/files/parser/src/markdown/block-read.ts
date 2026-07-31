@@ -34,3 +34,14 @@ export function readBlock(source: string, title: string): string | undefined {
   if (!heading) return undefined;
   return stringifyNodes(flattenHeading(heading));
 }
+
+// "Body" per SPEC.md: content directly under the heading only, up to (not
+// including) the first child heading. Excludes the heading line itself —
+// matches what writeBlock's body/replace expects as input, so a read-then-
+// write round trip on scope="body" doesn't duplicate or drop the heading.
+export function readBody(source: string, title: string): string | undefined {
+  const tree = buildHeadingTree(parseDocument(source), true);
+  const heading = findHeading(tree, title);
+  if (!heading) return undefined;
+  return stringifyNodes(heading.body);
+}
