@@ -17,31 +17,13 @@ export const LocationSchema = z
       "`path`.",
   );
 
-export const BlockSchema = z
-  .string()
-  .optional()
-  .describe(
-    "Heading title to scope this operation to a specific section. " +
-      "Omit to operate on the whole file.",
-  );
-
-export const ScopeSchema = z
-  .enum(["body", "subtree"])
-  .optional()
-  .default("body")
-  .describe(
-    "Only used with `block`. 'body' = content directly under the heading " +
-      "only; 'subtree' = the heading plus everything nested under it. " +
-      "Default 'body'.",
-  );
-
 export const ModeSchema = z
-  .enum(["replace", "append"])
+  .enum(["replace", "append", "prepend"])
   .optional()
   .default("replace")
   .describe(
     "'replace' (default) overwrites the target (whole file, block, or " +
-      "line range). 'append' adds after it instead.",
+      "line range). 'append' adds after it, 'prepend' adds before it.",
   );
 
 export const DepthSchema = z
@@ -60,24 +42,54 @@ export const DepthSchema = z
       "an explicit depth.",
   );
 
-export const FromSchema = z
-  .number()
-  .int()
-  .min(1)
-  .optional()
-  .describe(
-    "Raw target: 1-indexed line to start at (inclusive). Mutually exclusive " +
-      "with `block`. Omit `to` to target a single line.",
-  );
+// Inner shapes for TargetSchema below — kept un-exported since nothing
+// outside the union needs a bare `from`/`to`/`block`/`scope` anymore; the
+// union is the only public surface, so the mutual-exclusivity that used to
+// be convention (four sibling optional fields) is now structural (two
+// branches of a discriminated shape).
+const BlockTargetSchema = z.object({
+  block: z
+    .string()
+    .describe("Heading title to scope this operation to a specific section."),
+  scope: z
+    .enum(["body", "subtree"])
+    .optional()
+    .default("body")
+    .describe(
+      "'body' = content directly under the heading only; 'subtree' = the " +
+        "heading plus everything nested under it. Default 'body'.",
+    ),
+});
 
-export const ToSchema = z
-  .number()
-  .int()
-  .min(1)
+const LineRangeTargetSchema = z.object({
+  from: z
+    .number()
+    .int()
+    .refine((v) => v !== 0, "must not be 0")
+    .describe(
+      "1-indexed line to start at (inclusive). Negative counts from the " +
+        "end, Python-slice style (-1 = last line, -10 = 10th-from-last).",
+    ),
+  to: z
+    .number()
+    .int()
+    .refine((v) => v !== 0, "must not be 0")
+    .optional()
+    .describe(
+      "1-indexed line to end at (inclusive), same negative convention as " +
+        "`from`. Omitted: targets that single `from` line, whether `from` " +
+        "is positive or negative. To span to the end of the file, pass " +
+        "`to: -1` explicitly (e.g. `from: -10, to: -1` for the last 10 " +
+        "lines).",
+    ),
+});
+
+export const TargetSchema = z
+  .union([BlockTargetSchema, LineRangeTargetSchema])
   .optional()
   .describe(
-    "Raw target: 1-indexed line to end at (inclusive). Only used together " +
-      "with `from`.",
+    "What to target within the file: a markdown heading, a line range, " +
+      "or (if omitted) the whole file.",
   );
 
 export const ForceSchema = z

@@ -2,16 +2,17 @@ import { handlers, type MarkdownAddress } from "./registry.js";
 import type { RawAddress } from "./raw/index.js";
 import type { WriteMode } from "./markdown/index.js";
 
-interface ResolveInput {
-  block?: string;
-  scope?: "body" | "subtree";
-  from?: number;
-  to?: number;
-}
+type ResolveInput =
+  | { block: string; scope?: "body" | "subtree"; from?: undefined; to?: undefined }
+  | { from: number; to?: number; block?: undefined; scope?: undefined }
+  | { block?: undefined; scope?: undefined; from?: undefined; to?: undefined };
 
-// Per SPEC-PARSER.md: block vs from/to vs whole-file, block and from/to are
-// mutually exclusive. Lives alongside registry.ts rather than in the tool
-// layer — this is "given handlers, decide how to dispatch to them," which is
+// Per SPEC-PARSER.md: block vs from/to vs whole-file. Mirrors the tool-layer
+// TargetSchema union one-to-one (block+scope | from+to | omitted entirely),
+// so mutual exclusivity is structural here too — there's no longer a branch
+// that checks for both `block` and `from` being set, since the type doesn't
+// allow it. Lives alongside registry.ts rather than in the tool layer —
+// this is "given handlers, decide how to dispatch to them," which is
 // parser-side routing logic, not a tools/ concern. Keeping it here also means
 // a future split into separate packages (parser vs tools) doesn't have to
 // drag tool-layer code into the parser package just to route.
@@ -58,10 +59,8 @@ export type Target =
     }
   | { kind: "whole-file" };
 
-export function resolveTarget(input: ResolveInput): Target {
-  if (input.block !== undefined && input.from !== undefined) {
-    throw new Error("`block` and `from`/`to` are mutually exclusive.");
-  }
+export function resolveTarget(target: ResolveInput | undefined): Target {
+  const input = target ?? {};
   if (input.block !== undefined) {
     const scope = input.scope ?? "body";
     const address: MarkdownAddress = { heading: input.block, scope };
@@ -78,12 +77,18 @@ export function resolveTarget(input: ResolveInput): Target {
     const to = input.to;
     const address: RawAddress = { from: input.from, to };
     const handler = handlers.raw;
+    // Labels show the raw indices as given (negative = from end, same as
+    // the input) rather than resolved absolute line numbers — resolving
+    // negative indices needs the file's line count, which isn't available
+    // here (this runs before the file is read). "end" covers the one case
+    // with no literal to show: `to` omitted with a negative `from`.
+    const toLabel = to ?? (input.from < 0 ? "end" : input.from);
     return {
       kind: "raw",
       read: (source) => handler.read(source, address),
       write: (source, content, mode) => handler.write(source, address, content, mode),
-      notFoundError: `Line range ${input.from}-${to ?? input.from} is out of bounds.`,
-      describe: (mode) => `lines ${input.from}-${to ?? input.from} (${mode})`,
+      notFoundError: `Line range ${input.from}-${toLabel} is out of bounds.`,
+      describe: (mode) => `lines ${input.from}-${toLabel} (${mode})`,
     };
   }
   return { kind: "whole-file" };

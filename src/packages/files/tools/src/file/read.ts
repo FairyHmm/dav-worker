@@ -1,13 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FileToolsDeps } from "../deps.js";
 import { ok, err, resolvePath } from "../utils/index.js";
-import {
-  BlockSchema,
-  FromSchema,
-  LocationSchema,
-  PathSchema,
-  ToSchema,
-} from "../schemas.js";
+import { LocationSchema, PathSchema, TargetSchema } from "../schemas.js";
 import { resolveTarget } from "@dav-worker/files-parser";
 
 export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
@@ -15,30 +9,25 @@ export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
     "file_read",
     {
       description:
-        "Read a text file. Returns an error for binary files. `block` " +
-        "targets a markdown heading (its whole subtree); `from`/`to` " +
-        "targets a 1-indexed line range; omit both to read the whole " +
-        "file. `location` can name a shortcut base, with `path` as a " +
-        "relative addition onto it.",
+        "Read a text file — the whole file, a markdown heading, or a " +
+        "line range. Returns an error for binary files.",
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,
-        block: BlockSchema,
-        from: FromSchema,
-        to: ToSchema,
+        target: TargetSchema,
       },
     },
-    async ({ path: pathArg, location, block, from, to }) => {
+    async ({ path: pathArg, location, target }) => {
       try {
         const path = resolvePath(deps.config, { path: pathArg, location });
         const client = deps.storage;
         const { content } = await client.read(path);
 
-        const target = resolveTarget({ block, from, to });
-        if (target.kind === "whole-file") return ok(content);
+        const resolved = resolveTarget(target);
+        if (resolved.kind === "whole-file") return ok(content);
 
-        const result = target.read(content);
-        return result === undefined ? err(new Error(target.notFoundError)) : ok(result);
+        const result = resolved.read(content);
+        return result === undefined ? err(new Error(resolved.notFoundError)) : ok(result);
       } catch (e) {
         return err(e);
       }

@@ -3,7 +3,7 @@ import type { Root } from "mdast";
 import { parseDocument, stringifyNodes } from "./document.js";
 
 export type WriteScope = "body" | "subtree";
-export type WriteMode = "replace" | "append";
+export type WriteMode = "replace" | "append" | "prepend";
 
 interface HeadingRange {
   start: number; // index of the heading node itself
@@ -44,14 +44,19 @@ function findHeadingRange(
 }
 
 // Per SPEC.md's scope × mode table:
-//   body/replace    — replace nodes between heading and first child
-//   subtree/replace — replace heading + all descendants + their content
-//   body/append     — append to end of body, before first child
-//   subtree/append  — append after last node of subtree
+//   body/replace     — replace nodes between heading and first child
+//   subtree/replace  — replace heading + all descendants + their content
+//   body/append      — append to end of body, before first child
+//   subtree/append   — append after last node of subtree
+//   body/prepend     — insert right after the heading, before existing body
+//   subtree/prepend  — insert right after the heading line, before the
+//                       body (same insertion point as body/prepend — the
+//                       heading itself is never duplicated or moved)
 //
 // `content` is parsed as its own mini-document and spliced in as nodes —
-// for scope="subtree" this must include the heading line itself (the same
-// shape readBlock returns), for scope="body" it must not.
+// for scope="subtree" mode="replace" this must include the heading line
+// itself (the same shape readBlock returns), every other combination must
+// not, since the heading node stays put and only body content is spliced.
 //
 // Returns the full updated document, or undefined if no heading with that
 // title exists.
@@ -82,8 +87,12 @@ export function writeBlock(
     );
   } else if (scope === "body" && mode === "append") {
     root.children.splice(range.bodyEnd, 0, ...newNodes);
-  } else {
+  } else if (scope === "subtree" && mode === "append") {
     root.children.splice(range.subtreeEnd, 0, ...newNodes);
+  } else {
+    // prepend, both scopes — insert right after the heading line, before
+    // any existing body content
+    root.children.splice(range.start + 1, 0, ...newNodes);
   }
 
   return stringifyNodes(root.children);
