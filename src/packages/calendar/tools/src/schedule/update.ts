@@ -23,14 +23,14 @@ export function registerScheduleUpdateTool(server: McpServer, deps: CalendarTool
     "schedule_update",
     {
       description:
-        "Update a calendar event by id, changing only the fields provided. " +
-        "Searches all configured calendars for the id. Omitting `occurrence` " +
-        "edits the whole series (or a non-recurring event); providing it " +
-        "edits just that one instance of a recurring event, detaching it " +
-        "from the series (idempotent — repeat calls against the same " +
-        "occurrence edit the existing detached instance rather than " +
-        "re-detaching). Bulk update (array input) is NOT implemented here — " +
-        "compose repeated single calls via `batch` instead.",
+        "Update a calendar event by id, changing only the fields provided.",
+      annotations: {
+        title: "Update Event",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: {
         id: IdSchema,
         occurrence: OccurrenceSchema,

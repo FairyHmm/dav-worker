@@ -28,7 +28,8 @@ export const EventIdSchema = z
   .describe(
     "Optional id of an external event (e.g. a CalDAV event UID) to link this " +
       "task to. Its start becomes this task's DUE (one-shot copy, not live-" +
-      "synced) and a RELATED-TO is written. Omit for a standalone, undated task.",
+      "synced) and a RELATED-TO is written. This is the only way to set a " +
+      "due date. Omit for a standalone, undated task.",
   );
 
 export const TaskIdSchema = z

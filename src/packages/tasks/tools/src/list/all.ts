@@ -8,6 +8,13 @@ export function registerListAllTool(server: McpServer, deps: TaskToolsDeps): voi
     {
       description:
         "List all existing task lists.",
+      annotations: {
+        title: "List Task Lists",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: {},
     },
     async () => {

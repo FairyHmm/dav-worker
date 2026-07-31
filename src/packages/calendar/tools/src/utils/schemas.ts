@@ -56,7 +56,8 @@ export const RecurrenceSchema = z
 export const IdSchema = z
   .string()
   .describe(
-    "The event's CalDAV UID, as returned by nc_schedule_list/nc_schedule_create.",
+    "The event's CalDAV UID, as returned by nc_schedule_list/nc_schedule_create. " +
+      "Looked up across all configured calendars, not just one.",
   );
 
 export const OccurrenceSchema = DateTimeSchema.optional().describe(

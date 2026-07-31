@@ -13,11 +13,16 @@ export function registerCopyTool(server: McpServer, deps: FileToolsDeps): void {
     "entry_copy",
     {
       description:
-        "Copy a file or directory. By default, refuses to overwrite an " +
-        "existing destination and returns its metadata instead — set " +
-        "force=true to overwrite without warning. `srcLocation`/" +
-        "`dstLocation` can each name a shortcut base, with `src`/`dst` as a " +
-        "relative addition onto them.",
+        "Copy a file or directory. `srcLocation`/`dstLocation` can each " +
+        "name a shortcut base, with `src`/`dst` as a relative addition " +
+        "onto them.",
+      annotations: {
+        title: "Copy Entry",
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
       inputSchema: {
         src: PathSchema.describe("Source path").optional(),
         dst: PathSchema.describe("Destination path").optional(),

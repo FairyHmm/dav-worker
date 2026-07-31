@@ -10,6 +10,13 @@ export function registerTaskDeleteTool(server: McpServer, deps: TaskToolsDeps): 
     {
       description:
         "Delete a task by id. No-op, not an error, if the id doesn't exist.",
+      annotations: {
+        title: "Delete Task",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: { id: TaskIdSchema },
     },
     async ({ id }) => {

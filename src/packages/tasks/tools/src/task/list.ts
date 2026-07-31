@@ -14,6 +14,13 @@ export function registerTaskListTool(server: McpServer, deps: TaskToolsDeps): vo
       description:
         "List tasks, optionally filtered by list, linked event, due date, " +
         "or status, and optionally sorted by due date or completion.",
+      annotations: {
+        title: "List Tasks",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: {
         list: ListSchema.optional(),
         event_id: EventIdSchema,

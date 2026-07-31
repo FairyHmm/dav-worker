@@ -12,7 +12,14 @@ export function registerTaskCreateTool(server: McpServer, deps: TaskToolsDeps): 
       description:
         "Create a task in a task list. Optionally link it to an event via " +
         "`event_id`, which gives the task a due date matching the event's " +
-        "start. There is no direct way to set a due date otherwise.",
+        "start.",
+      annotations: {
+        title: "Create Task",
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
       inputSchema: {
         title: TaskTitleSchema,
         list: ListSchema,

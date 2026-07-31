@@ -20,10 +20,15 @@ export function registerScheduleCreateTool(server: McpServer, deps: CalendarTool
     "schedule_create",
     {
       description:
-        "Create a calendar event. Optionally pass `travel` to also create " +
-        "separate before/after travel-buffer events in the same calendar, " +
-        "linked to this event via X-DAV-WORKER-TRAVEL-FOR. Optionally pass " +
-        "`recurrence` for a daily/weekly repeating event.",
+        "Create a calendar event. Optionally add before/after travel-buffer " +
+        "events alongside it.",
+      annotations: {
+        title: "Create Event",
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
       inputSchema: {
         title: TitleSchema,
         start: DateTimeSchema,

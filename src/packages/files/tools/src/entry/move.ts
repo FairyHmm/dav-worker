@@ -13,11 +13,16 @@ export function registerMoveTool(server: McpServer, deps: FileToolsDeps): void {
     "entry_move",
     {
       description:
-        "Move or rename a file or directory. By default, refuses to " +
-        "overwrite an existing destination and returns its metadata instead " +
-        "— set force=true to overwrite without warning. `srcLocation`/" +
-        "`dstLocation` can each name a shortcut base, with `src`/`dst` as a " +
-        "relative addition onto them.",
+        "Move or rename a file or directory. `srcLocation`/`dstLocation` " +
+        "can each name a shortcut base, with `src`/`dst` as a relative " +
+        "addition onto them.",
+      annotations: {
+        title: "Move Entry",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
       inputSchema: {
         src: PathSchema.describe("Source path").optional(),
         dst: PathSchema.describe("Destination path").optional(),

@@ -62,6 +62,13 @@ export function registerScheduleFreeTool(server: McpServer, deps: CalendarToolsD
         "Find available time slots of at least `duration` within a window. " +
         "Omit `category` to search across all configured calendars — a slot " +
         "must be free on every searched calendar to count as available.",
+      annotations: {
+        title: "Find Free Time",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: {
         duration: z.string().describe("Minimum slot length, e.g. '1h', '30m'."),
         between: TimeWindowSchema,

@@ -18,6 +18,13 @@ export function registerWriteTool(server: McpServer, deps: FileToolsDeps): void 
         "Write text content to a file, replacing, appending to, or " +
         "prepending to the whole file, a markdown heading, or a line " +
         "range.",
+      annotations: {
+        title: "Write File",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,

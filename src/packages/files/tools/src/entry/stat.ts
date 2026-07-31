@@ -11,6 +11,13 @@ export function registerStatTool(server: McpServer, deps: FileToolsDeps): void {
         "Get metadata for a file or directory (size, type, last modified). " +
         "`location` can name a shortcut base, with `path` as a relative " +
         "addition onto it.",
+      annotations: {
+        title: "Get Entry Metadata",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: { path: PathSchema.optional(), location: LocationSchema },
     },
     async ({ path: pathArg, location }) => {

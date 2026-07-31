@@ -96,7 +96,11 @@ export const ForceSchema = z
   .boolean()
   .optional()
   .default(false)
-  .describe("Overwrite destination if it exists (default: false)");
+  .describe(
+    "Overwrite an existing destination (default: false). If false and " +
+      "the destination exists, the operation is refused and the " +
+      "destination's metadata is returned instead.",
+  );
 
 export function formatConflict(meta: FileEntry, callAgainWith: string): string {
   return (

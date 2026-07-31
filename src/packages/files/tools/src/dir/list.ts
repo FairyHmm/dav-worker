@@ -10,6 +10,13 @@ export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
       description:
         "List the contents of a directory. `location` can name a shortcut " +
         "base, with `path` as a relative addition onto it.",
+      annotations: {
+        title: "List Directory",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,

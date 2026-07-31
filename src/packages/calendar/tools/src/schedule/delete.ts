@@ -12,13 +12,14 @@ export function registerScheduleDeleteTool(server: McpServer, deps: CalendarTool
     {
       description:
         "Delete a calendar event by id, along with any travel-buffer " +
-        "events linked to it (X-DAV-WORKER-TRAVEL-FOR). Searches all " +
-        "configured calendars; no-ops silently if the id doesn't exist " +
-        "anywhere (idempotent delete, per SPEC-SCHEDULES.md's status-code " +
-        "contract). Omitting `occurrence` deletes the whole series (or a " +
-        "non-recurring event); providing it skips just that one instance " +
-        "of a recurring event (adds an EXDATE to the series — the series " +
-        "and its other instances are untouched).",
+        "events linked to it. No-op, not an error, if the id doesn't exist.",
+      annotations: {
+        title: "Delete Event",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: { id: IdSchema, occurrence: OccurrenceSchema },
     },
     async ({ id, occurrence }) => {

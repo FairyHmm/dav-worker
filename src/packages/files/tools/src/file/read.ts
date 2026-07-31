@@ -11,6 +11,13 @@ export function registerReadTool(server: McpServer, deps: FileToolsDeps): void {
       description:
         "Read a text file — the whole file, a markdown heading, or a " +
         "line range. Returns an error for binary files.",
+      annotations: {
+        title: "Read File",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: {
         path: PathSchema.optional(),
         location: LocationSchema,

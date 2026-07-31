@@ -11,6 +11,13 @@ export function registerCreateFolderTool(server: McpServer, deps: FileToolsDeps)
         "Create a directory. Succeeds silently if it already exists. " +
         "`location` can name a shortcut base, with `path` as a relative " +
         "addition onto it.",
+      annotations: {
+        title: "Create Directory",
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: { path: PathSchema.optional(), location: LocationSchema },
     },
     async ({ path: pathArg, location }) => {

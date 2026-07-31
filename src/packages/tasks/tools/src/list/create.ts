@@ -19,6 +19,13 @@ export function registerListCreateTool(server: McpServer, deps: TaskToolsDeps): 
     {
       description:
         "Create a new task list, separate from event calendars.",
+      annotations: {
+        title: "Create Task List",
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
       inputSchema: { name: ListNameSchema },
     },
     async ({ name }) => {

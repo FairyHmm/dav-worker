@@ -11,6 +11,13 @@ export function registerDeleteTool(server: McpServer, deps: FileToolsDeps): void
         "Delete a file or directory. No-ops silently if it doesn't exist. " +
         "`location` can name a shortcut base, with `path` as a relative " +
         "addition onto it.",
+      annotations: {
+        title: "Delete Entry",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: { path: PathSchema.optional(), location: LocationSchema },
     },
     async ({ path: pathArg, location }) => {

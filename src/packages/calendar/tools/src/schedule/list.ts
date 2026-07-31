@@ -14,9 +14,15 @@ export function registerScheduleListTool(server: McpServer, deps: CalendarToolsD
     "schedule_list",
     {
       description:
-        "List calendar events in a time window. Omit `category` to search all " +
-        "configured calendars. Does not yet merge in related tasks (tools/tasks " +
-        "isn't built yet) — that's a follow-up once task_* exists.",
+        "List calendar events in a time window. Omit `category` to " +
+        "search all configured calendars.",
+      annotations: {
+        title: "List Events",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: { time: TimeWindowSchema, category: categorySchema(deps.config).optional() },
     },
     async ({ time, category }) => {

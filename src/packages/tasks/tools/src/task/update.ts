@@ -22,7 +22,14 @@ export function registerTaskUpdateTool(server: McpServer, deps: TaskToolsDeps): 
       description:
         "Update a task by id, changing only the fields provided: title, " +
         "progress or cancellation, priority, tags, URL, event link, or " +
-        "list. Fields omitted are left unchanged.",
+        "list.",
+      annotations: {
+        title: "Update Task",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
       inputSchema: {
         id: TaskIdSchema,
         title: TaskTitleSchema.optional(),

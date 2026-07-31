@@ -9,9 +9,15 @@ export function registerListDeleteTool(server: McpServer, deps: TaskToolsDeps): 
     {
       description:
         "Delete a task list (the CalDAV collection and every task in it). " +
-        "No-op, not an error, if the slug doesn't exist. Nextcloud's calendar " +
-        "trashbin reserves the name for a while afterward — list_create will " +
-        "say so explicitly if you try to reuse it too soon.",
+        "No-op, not an error, if the slug doesn't exist. The name may be " +
+        "temporarily unavailable for reuse afterward.",
+      annotations: {
+        title: "Delete Task List",
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
       inputSchema: { list: ListSchema },
     },
     async ({ list }) => {
