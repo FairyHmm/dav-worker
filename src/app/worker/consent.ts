@@ -148,7 +148,7 @@ function renderConsentForm(params: AuthorizeParams, registration: ClientRegistra
       <input type="text" name="locationsConfigPath" placeholder="/locations.toml" />
     </label>
     <label>Calendars config path
-      <input type="text" name="calendarsConfigPath" placeholder="/calendars.toml" />
+      <input type="text" name="calendarsConfigPath" placeholder="/calendars.csv" />
     </label>
 
     <button type="submit">Connect</button>

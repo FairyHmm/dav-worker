@@ -12,7 +12,7 @@
   "main": "index.ts",
   "compatibility_date": "2025-03-10",
   "compatibility_flags": ["nodejs_compat"],
-  "rules": [{ "type": "Text", "globs": ["**/*.toml"], "fallthrough": true }],
+  "rules": [{ "type": "Text", "globs": ["**/*.toml", "**/*.csv"], "fallthrough": true }],
   "observability": {
     "enabled": true,
   },

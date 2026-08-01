@@ -12,10 +12,22 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
-import { registerCalendarTools, parseCalendarConfig, findEventAcrossCalendars, findMasterEvent } from "@dav-worker/calendar-tools";
+import {
+  registerCalendarTools,
+  parseCalendarConfig,
+  resolveCategoryColor,
+  allCategories,
+  findEventAcrossCalendars,
+  findMasterEvent,
+} from "@dav-worker/calendar-tools";
 import { registerTaskTools } from "@dav-worker/task-tools";
 import { parseFilesConfig } from "@dav-worker/files-locations";
-import { parseCalendar, findAllComponents, getDateTime, basicToIso } from "@dav-worker/calendar-ical";
+import {
+  parseCalendar,
+  findAllComponents,
+  getDateTime,
+  basicToIso,
+} from "@dav-worker/calendar-ical";
 import {
   createNextcloudWebDAVStorage,
   createNextcloudCalDAVStorage,
@@ -66,7 +78,7 @@ async function main(): Promise<void> {
 
   const [locationsContent, calendarsContent] = await Promise.all([
     loadConfig("LOCATIONS_CONFIG_PATH", "locations.toml", fileStorage),
-    loadConfig("CALENDARS_CONFIG_PATH", "calendars.toml", fileStorage),
+    loadConfig("CALENDARS_CONFIG_PATH", "calendars.csv", fileStorage),
   ]);
   const filesConfig = parseFilesConfig(locationsContent);
   const calendarConfig = parseCalendarConfig(calendarsContent);
@@ -74,7 +86,12 @@ async function main(): Promise<void> {
   // Mirrors app/worker/index.ts's resolveEventDue exactly — see that
   // file's comment for the full rationale (SPEC-MONOREPO.md A.7).
   const resolveEventDue = async (eventId: string): Promise<string | null> => {
-    const { found } = await findEventAcrossCalendars(calendarStorage, calendarConfig, "VEVENT", eventId);
+    const { found } = await findEventAcrossCalendars(
+      calendarStorage,
+      calendarConfig,
+      "VEVENT",
+      eventId,
+    );
     if (!found?.entry.calendarData) return null;
     const cal = parseCalendar(found.entry.calendarData);
     const events = findAllComponents(cal, "VEVENT");
@@ -85,10 +102,24 @@ async function main(): Promise<void> {
     return basicToIso(dt.raw);
   };
 
+  // Mirrors app/worker/index.ts's resolveCategoryColor wiring exactly —
+  // same rationale (deps.ts), just a pure config lookup, no Nextcloud
+  // round-trip.
+  const resolveCategoryColorFn = (category: string): string =>
+    resolveCategoryColor(calendarConfig, category);
+
   const server = new McpServer({ name: "dav-worker-local", version: "0.1.0" });
   registerFileTools(server, { storage: fileStorage, config: filesConfig });
-  registerCalendarTools(server, { storage: calendarStorage, config: calendarConfig });
-  registerTaskTools(server, { storage: taskStorage, resolveEventDue });
+  registerCalendarTools(server, {
+    storage: calendarStorage,
+    config: calendarConfig,
+  });
+  registerTaskTools(server, {
+    storage: taskStorage,
+    resolveEventDue,
+    resolveCategoryColor: resolveCategoryColorFn,
+    categories: allCategories(calendarConfig),
+  });
 
   await server.connect(new StdioServerTransport());
 }

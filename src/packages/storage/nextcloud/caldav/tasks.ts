@@ -118,7 +118,7 @@ export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskSt
 
     // list-management (MKCOL/DELETE/PROPFIND) — VTODO-only collections
     // are otherwise identical WebDAV collections to files/calendars.
-    async listCreate(name) {
+    async listCreate(name, color) {
       // Uses Extended MKCOL (RFC 5689) rather than the MKCALENDAR method
       // CalDAV (RFC 4791) itself defines. The two are equivalent per
       // spec — Extended MKCOL creates the same calendar-collection
@@ -133,8 +133,16 @@ export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskSt
       // (verified live: 201 Created). X-HTTP-Method-Override is NOT an
       // alternative here — SabreDAV ignores it and errors on body/verb
       // mismatch instead.
+      //
+      // ic:calendar-color is set in this same MKCOL <d:set> block when
+      // `color` is given, rather than a separate follow-up PROPPATCH —
+      // one fewer request, and matches how displayname is already set
+      // at creation time in the same body.
+      const colorProp = color
+        ? `\n      <ic:calendar-color>${xmlEscape(color)}</ic:calendar-color>`
+        : "";
       const body = `<?xml version="1.0" encoding="utf-8"?>
-<d:mkcol xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+<d:mkcol xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:ic="http://apple.com/ns/ical/">
   <d:set>
     <d:prop>
       <d:resourcetype>
@@ -144,7 +152,7 @@ export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskSt
       <d:displayname>${xmlEscape(name)}</d:displayname>
       <c:supported-calendar-component-set>
         <c:comp name="VTODO"/>
-      </c:supported-calendar-component-set>
+      </c:supported-calendar-component-set>${colorProp}
     </d:prop>
   </d:set>
 </d:mkcol>`;
@@ -220,8 +228,10 @@ export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskSt
         .map((r) => {
           const decodedHref = decodeURIComponent(String(r.href ?? "").replace(/\/$/, ""));
           const slug = decodedHref.split("/").pop() ?? "";
-          const displayName = propOrNull(mergedProps(r).displayname) ?? slug;
-          return { slug, displayName };
+          const props = mergedProps(r);
+          const displayName = propOrNull(props.displayname) ?? slug;
+          const color = propOrNull(props["calendar-color"]);
+          return { slug, displayName, color };
         });
     },
   };

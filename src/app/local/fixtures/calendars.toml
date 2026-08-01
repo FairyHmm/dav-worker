@@ -1,7 +1,0 @@
-# Minimal default used only when CALENDARS_CONFIG_PATH is unset for local
-# dev. See src/packages/calendar/tools/src/calendars.toml for the real
-# shape reference.
-
-[calendars]
-work = "work"
-personal = "personal"

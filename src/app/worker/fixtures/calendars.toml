@@ -1,9 +1,0 @@
-# Bundled default used when the consent screen's calendarsConfigPath is
-# left blank. Temporary: once arbitrary per-user config paths are the
-# only supported mode, this file (and the fallback in index.ts) goes away.
-# See src/packages/calendar/tools/src/calendars.toml for the real shape
-# reference.
-
-[calendars]
-work = "work"
-personal = "personal"

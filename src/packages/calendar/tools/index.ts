@@ -8,9 +8,22 @@ import { registerScheduleFreeTool } from "./src/schedule/free.js";
 
 export type { CalendarToolsDeps } from "./src/deps.js";
 // TODO-MONOREPO 9e: config parsing exposed publicly so app/worker (and
-// eventually app/local) can fetch the session's calendars.toml at runtime
-// and hand the parsed result into CalendarToolsDeps.config.
-export { parseCalendarConfig, allCalendarNames, type CalendarConfig } from "./src/calendars.js";
+// app/local) can fetch the session's calendars.csv at runtime and hand the
+// parsed result into CalendarToolsDeps.config. One CSV, one row per
+// calendar (category, slug, color — all required, all mutually unique),
+// parsed into indexed lookup maps rather than a raw row array so every
+// direction (category->slug, category->color, slug->row, color->category)
+// is O(1).
+export {
+  parseCalendarConfig,
+  resolveCalendarName,
+  resolveCategoryColor,
+  resolveCategoryByColor,
+  allCalendarNames,
+  allCategories,
+  type CalendarConfig,
+  type CalendarRow,
+} from "./src/calendars.js";
 // Exported for app/worker's resolveEventDue (tasks/tools' one sanctioned
 // cross-domain edge, SPEC-MONOREPO.md A.7) — app/worker is the sole wiring
 // point and is allowed to depend on calendar/tools directly; this reuses
@@ -29,7 +42,10 @@ export { findMasterEvent } from "./src/utils/mapping.js";
 // CalendarToolsDeps (a CalendarStorage implementation), never a platform
 // type like Env — so app/worker and app/local can both call this with
 // their own conforming storage, unchanged.
-export function registerCalendarTools(server: McpServer, deps: CalendarToolsDeps): void {
+export function registerCalendarTools(
+  server: McpServer,
+  deps: CalendarToolsDeps,
+): void {
   registerScheduleListTool(server, deps);
   registerScheduleCreateTool(server, deps);
   registerScheduleUpdateTool(server, deps);

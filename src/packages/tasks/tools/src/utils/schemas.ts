@@ -4,16 +4,22 @@ import { z } from "zod";
 // (SPEC-TASKS.md), discovered via list_all, not looked up in a category map.
 export const ListSchema = z
   .string()
-  .describe("Task list slug, as returned by list_all or list_create.");
+  .describe("Which task list this belongs to.");
 
-export const ListNameSchema = z
+export const ListNameSchema = z.string().describe("The list's display name.");
+
+// Plain z.string() rather than a z.enum() of known categories — the valid
+// set is per-session config (calendars.csv), not knowable when this
+// schema is defined. list_create validates the value against the
+// caller's actual configured categories at request time instead.
+export const ListCategorySchema = z
   .string()
+  .optional()
   .describe(
-    "Task list display name. Slugified into a URL-safe collection segment " +
-      "(lowercased, non-alphanumeric runs collapsed to '-', trimmed).",
+    "Category to file this list under, e.g. 'work' or 'school'. Omit to leave the list uncategorized.",
   );
 
-export const TaskTitleSchema = z.string().describe("Task title.");
+export const TaskTitleSchema = z.string().describe("The task's title.");
 
 // No direct `due` input (SPEC-TASKS.md) — a task's date always comes from
 // its linked event via `event_id`. Genuinely undated, unlinked tasks
@@ -26,15 +32,11 @@ export const EventIdSchema = z
   .string()
   .optional()
   .describe(
-    "Optional id of an external event (e.g. a CalDAV event UID) to link this " +
-      "task to. Its start becomes this task's DUE (one-shot copy, not live-" +
-      "synced) and a RELATED-TO is written. This is the only way to set a " +
-      "due date. Omit for a standalone, undated task.",
+    "An event to attach this task to, giving it a due date matching that event's start. " +
+      "Omit to leave the task standalone and undated.",
   );
 
-export const TaskIdSchema = z
-  .string()
-  .describe("The task's id, as returned by task_list/task_create.");
+export const TaskIdSchema = z.string().describe("Which task to act on.");
 
 // task_update's variant of EventIdSchema: previously there was no way to
 // remove an existing event_id link short of delete-and-recreate under a
@@ -47,10 +49,9 @@ export const UpdateEventIdSchema = z
   .union([z.string(), z.literal("unlink")])
   .optional()
   .describe(
-    "Id of an external event to link this task to (its start becomes this " +
-      "task's DUE, one-shot copy, and a RELATED-TO is written), or the " +
-      "literal string 'unlink' to remove an existing link and clear the " +
-      "due date. Omit to leave any existing link/due date untouched.",
+    "Attach this task to an event (giving it a due date matching that event's start), " +
+      "or pass 'unlink' to remove any existing attachment and clear the due date. " +
+      "Omit to leave the task's current attachment and due date as is.",
   );
 
 export const DueFilterSchema = z
@@ -61,26 +62,25 @@ export const DueFilterSchema = z
   ])
   .optional()
   .describe(
-    "Filter by due date: { from, to } as relative day-offsets from today " +
-      "(0 = today), { from, to } as absolute 'YYYY-MM-DD' dates, or a preset: " +
-      "'today' | 'week' | 'month'. Omit for no due-date filtering.",
+    "Restrict results to a due-date range: a day-offset window from today (0 = today), " +
+      "an absolute 'YYYY-MM-DD' window, or a preset of 'today' | 'week' | 'month'. " +
+      "Omit to include tasks regardless of due date.",
   );
 
 export const StatusSchema = z
   .enum(["progress", "completed", "cancelled"])
   .optional()
   .describe(
-    "Filter by status. 'progress' matches NEEDS-ACTION or IN-PROCESS (no " +
-      "meaningful frontend distinction between them). Omit to return tasks " +
-      "in all three states.",
+    "Restrict results to tasks in this state: 'progress' covers anything not yet " +
+      "finished or cancelled. Omit to include tasks in every state.",
   );
 
 export const SortSchema = z
   .enum(["due", "completion"])
   .optional()
   .describe(
-    "Sort order: 'due' (ascending, earliest first) or 'completion' " +
-      "(PERCENT-COMPLETE, ascending). Omit for list-storage order.",
+    "How to order results: by due date (earliest first) or by completion percentage " +
+      "(least complete first). Omit to leave results in their stored order.",
   );
 
 // task_update's new-value field, separate from StatusSchema above (that
@@ -96,9 +96,8 @@ export const UpdateProgressSchema = z
   .union([z.number().min(0).max(100), z.literal("cancelled")])
   .optional()
   .describe(
-    "Either a completion percentage (0-100, maps to PERCENT-COMPLETE; " +
-      "reaching 100 also marks STATUS as COMPLETED), or the literal string " +
-      "'cancelled' to mark the task cancelled. Omit to leave unchanged.",
+    "Update the task's progress: a percentage from 0-100 (100 marks it complete), " +
+      "or 'cancelled' to mark it cancelled. Omit to leave progress unchanged.",
   );
 
 export const PrioritySchema = z
@@ -108,7 +107,7 @@ export const PrioritySchema = z
   .max(9)
   .optional()
   .describe(
-    "Priority 0-9 per RFC 5545 (0 = undefined/none, 1 = highest, 9 = lowest). " +
+    "The task's priority, from 1 (highest) to 9 (lowest); 0 means no priority set. " +
       "Omit to leave unchanged.",
   );
 
@@ -116,17 +115,14 @@ export const TagsSchema = z
   .array(z.string())
   .optional()
   .describe(
-    "Tags to add or remove from CATEGORIES, merged against the task's " +
-      "existing tags. A plain string adds it (if not already present); a " +
-      "string prefixed with '-' removes it (e.g. '-urgent'). Omit to leave " +
-      "tags unchanged.",
+    "Tags to add or remove. A plain string adds a tag; a string prefixed with '-' " +
+      "removes it, e.g. '-urgent'. Omit to leave the task's tags unchanged.",
   );
 
 export const UrlSchema = z
   .string()
   .optional()
   .describe(
-    "Sets the task's URL (RFC 5545 URL property) — e.g. a link to a " +
-      "Nextcloud Notes entry. Pass an empty string to clear it. Omit to " +
-      "leave unchanged.",
+    "A link to associate with the task, e.g. a related note. Pass an empty string " +
+      "to remove it. Omit to leave unchanged.",
   );

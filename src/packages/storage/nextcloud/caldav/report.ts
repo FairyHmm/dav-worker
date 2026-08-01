@@ -12,12 +12,21 @@ import type { ComponentType, ReportEntry } from "@dav-worker/calendar-contracts"
 // Nextcloud's calendars home mixes VEVENT calendars and VTODO-only task
 // lists as sibling collections with no other distinguishing prop — this is
 // the only way to tell which is which without opening each one.
+// ic:calendar-color added for list_all's color filter (SPEC-TASKS.md
+// task-lists-have-no-other-metadata extension) — same Apple/Nextcloud-
+// namespaced prop event calendars already carry, confirmed live against
+// Nextcloud (task lists are the same oc_calendars-backed collection type,
+// just VTODO-only, so the prop applies equally here). A collection with
+// no color set returns an empty <ic:calendar-color/> element, which
+// mergedProps'/propOrNull's existing empty-string-is-absent handling
+// already treats as "no value" — no new parsing needed for that case.
 export const CALDAV_COLLECTION_PROPFIND_BODY = `<?xml version="1.0"?>
-<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:ic="http://apple.com/ns/ical/">
   <d:prop>
     <d:resourcetype/>
     <d:displayname/>
     <c:supported-calendar-component-set/>
+    <ic:calendar-color/>
   </d:prop>
 </d:propfind>`;
 

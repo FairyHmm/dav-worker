@@ -1,10 +1,22 @@
 import { createMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
-import { registerCalendarTools, parseCalendarConfig, findEventAcrossCalendars, findMasterEvent } from "@dav-worker/calendar-tools";
+import {
+  registerCalendarTools,
+  parseCalendarConfig,
+  resolveCategoryColor,
+  allCategories,
+  findEventAcrossCalendars,
+  findMasterEvent,
+} from "@dav-worker/calendar-tools";
 import { registerTaskTools } from "@dav-worker/task-tools";
 import { parseFilesConfig } from "@dav-worker/files-locations";
-import { parseCalendar, findAllComponents, getDateTime, basicToIso } from "@dav-worker/calendar-ical";
+import {
+  parseCalendar,
+  findAllComponents,
+  getDateTime,
+  basicToIso,
+} from "@dav-worker/calendar-ical";
 import {
   createNextcloudWebDAVStorage,
   createNextcloudCalDAVStorage,
@@ -14,7 +26,7 @@ import {
 import { handleAuthorize, exchangeCode } from "./consent.js";
 import { seal, open, TokenError } from "./auth.js";
 import defaultLocationsToml from "./fixtures/locations.toml";
-import defaultCalendarsToml from "./fixtures/calendars.toml";
+import defaultCalendarsCsv from "./fixtures/calendars.csv";
 
 // No `workers-oauth-provider`, no OAUTH_KV, no grant store of any kind:
 // every token in this file is self-contained (see auth.ts). SessionProps
@@ -31,7 +43,6 @@ export interface SessionProps {
 interface Env {
   TOKEN_KEY: string;
 }
-
 
 // Blank config path from the consent screen falls back to the bundled
 // fixture (mirrors app/local's fixture fallback) instead of hitting
@@ -58,7 +69,7 @@ async function createServer(props: SessionProps): Promise<McpServer> {
 
   const [locationsContent, calendarsContent] = await Promise.all([
     loadConfig(props.configs.locations, defaultLocationsToml, fileStorage),
-    loadConfig(props.configs.calendars, defaultCalendarsToml, fileStorage),
+    loadConfig(props.configs.calendars, defaultCalendarsCsv, fileStorage),
   ]);
   const filesConfig = parseFilesConfig(locationsContent);
   const calendarConfig = parseCalendarConfig(calendarsContent);
@@ -77,7 +88,12 @@ async function createServer(props: SessionProps): Promise<McpServer> {
   // RECURRENCE-ID overrides as sibling VEVENTs — DTSTART must come from
   // the master, not whichever VEVENT parses first.
   const resolveEventDue = async (eventId: string): Promise<string | null> => {
-    const { found } = await findEventAcrossCalendars(calendarStorage, calendarConfig, "VEVENT", eventId);
+    const { found } = await findEventAcrossCalendars(
+      calendarStorage,
+      calendarConfig,
+      "VEVENT",
+      eventId,
+    );
     if (!found?.entry.calendarData) return null;
     const cal = parseCalendar(found.entry.calendarData);
     const events = findAllComponents(cal, "VEVENT");
@@ -88,9 +104,23 @@ async function createServer(props: SessionProps): Promise<McpServer> {
     return basicToIso(dt.raw);
   };
 
+  // resolveCategoryColor mirrors resolveEventDue's edge exactly — same
+  // rationale, same wiring point, just a pure config lookup instead of a
+  // Nextcloud round-trip.
+  const resolveCategoryColorFn = (category: string): string =>
+    resolveCategoryColor(calendarConfig, category);
+
   registerFileTools(server, { storage: fileStorage, config: filesConfig });
-  registerCalendarTools(server, { storage: calendarStorage, config: calendarConfig });
-  registerTaskTools(server, { storage: taskStorage, resolveEventDue });
+  registerCalendarTools(server, {
+    storage: calendarStorage,
+    config: calendarConfig,
+  });
+  registerTaskTools(server, {
+    storage: taskStorage,
+    resolveEventDue,
+    resolveCategoryColor: resolveCategoryColorFn,
+    categories: allCategories(calendarConfig),
+  });
 
   return server;
 }
@@ -106,17 +136,40 @@ function jsonResponse(body: unknown, status = 200): Response {
 // `client_id` *is* the registration, sealed under TOKEN_KEY. There is
 // nothing to look up later — /authorize just re-opens the client_id to
 // recover the redirect_uris it was issued for.
-async function handleRegister(request: Request, secret: string): Promise<Response> {
-  const body = (await request.json()) as { redirect_uris?: string[]; client_name?: string };
+async function handleRegister(
+  request: Request,
+  secret: string,
+): Promise<Response> {
+  const body = (await request.json()) as {
+    redirect_uris?: string[];
+    client_name?: string;
+  };
   const redirect_uris = body.redirect_uris ?? [];
   if (redirect_uris.length === 0) {
-    return jsonResponse({ error: "invalid_client_metadata", error_description: "redirect_uris required" }, 400);
+    return jsonResponse(
+      {
+        error: "invalid_client_metadata",
+        error_description: "redirect_uris required",
+      },
+      400,
+    );
   }
-  const client_id = await seal(secret, { redirect_uris, client_name: body.client_name });
-  return jsonResponse({ client_id, redirect_uris, client_name: body.client_name, token_endpoint_auth_method: "none" });
+  const client_id = await seal(secret, {
+    redirect_uris,
+    client_name: body.client_name,
+  });
+  return jsonResponse({
+    client_id,
+    redirect_uris,
+    client_name: body.client_name,
+    token_endpoint_auth_method: "none",
+  });
 }
 
-async function handleToken(request: Request, secret: string): Promise<Response> {
+async function handleToken(
+  request: Request,
+  secret: string,
+): Promise<Response> {
   const form = await request.formData();
   if (String(form.get("grant_type")) !== "authorization_code") {
     return jsonResponse({ error: "unsupported_grant_type" }, 400);
@@ -128,8 +181,12 @@ async function handleToken(request: Request, secret: string): Promise<Response> 
   try {
     props = await exchangeCode(secret, code, codeVerifier);
   } catch (err: unknown) {
-    const description = err instanceof TokenError ? err.message : "invalid code";
-    return jsonResponse({ error: "invalid_grant", error_description: description }, 400);
+    const description =
+      err instanceof TokenError ? err.message : "invalid code";
+    return jsonResponse(
+      { error: "invalid_grant", error_description: description },
+      400,
+    );
   }
 
   // No ttlSeconds: access tokens are long-lived by design (see
@@ -166,18 +223,26 @@ function protectedResourceMetadata(origin: string) {
   };
 }
 
-async function handleMcp(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function handleMcp(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+): Promise<Response> {
   const authHeader = request.headers.get("authorization") ?? "";
   const match = /^Bearer (.+)$/i.exec(authHeader);
   if (!match) {
-    return new Response("Missing bearer token. Connect via /authorize.", { status: 401 });
+    return new Response("Missing bearer token. Connect via /authorize.", {
+      status: 401,
+    });
   }
 
   let props: SessionProps;
   try {
     props = await open<SessionProps>(env.TOKEN_KEY, match[1]);
   } catch {
-    return new Response("Invalid or expired token. Reconnect via /authorize.", { status: 401 });
+    return new Response("Invalid or expired token. Reconnect via /authorize.", {
+      status: 401,
+    });
   }
 
   let server: McpServer;
@@ -192,22 +257,39 @@ async function handleMcp(request: Request, env: Env, ctx: ExecutionContext): Pro
     // client: a parse error could quote back arbitrary bytes from the
     // user's own config file.
     if (err instanceof WebDAVHttpError && err.status === 401) {
-      return new Response("Nextcloud authentication failed. Reconnect via /authorize.", { status: 401 });
+      return new Response(
+        "Nextcloud authentication failed. Reconnect via /authorize.",
+        { status: 401 },
+      );
     }
-    return new Response("Failed to start session: could not load Nextcloud config.", { status: 502 });
+    return new Response(
+      "Failed to start session: could not load Nextcloud config.",
+      { status: 502 },
+    );
   }
 
-  return createMcpHandler(server)(request, env as unknown as globalThis.Env, ctx);
+  return createMcpHandler(server)(
+    request,
+    env as unknown as globalThis.Env,
+    ctx,
+  );
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/.well-known/oauth-authorization-server") {
       return jsonResponse(wellKnownMetadata(url.origin));
     }
-    if (url.pathname === "/.well-known/oauth-protected-resource" || url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+    if (
+      url.pathname === "/.well-known/oauth-protected-resource" ||
+      url.pathname === "/.well-known/oauth-protected-resource/mcp"
+    ) {
       return jsonResponse(protectedResourceMetadata(url.origin));
     }
     if (url.pathname === "/register" && request.method === "POST") {

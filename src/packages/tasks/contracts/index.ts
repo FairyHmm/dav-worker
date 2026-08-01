@@ -31,9 +31,18 @@ export interface TaskStorage {
   // distinct from a config-mapped category. `list` is a raw slug here too:
   // list_create/list_all are the only source of valid values, there's no
   // separate lists.toml.
-  listCreate(name: string): Promise<void>;
+  //
+  // `color` on listCreate is an optional plain hex string (e.g. "#3B82F6"),
+  // resolved by the tools layer from a calendar category via the
+  // resolveCategoryColor deps edge (mirrors resolveEventDue) — this
+  // contract stays ignorant of categories/calendars.toml entirely, same as
+  // the rest of the file's independence-from-CalendarStorage rationale
+  // above. Omitted/undefined means "create uncategorized, no color set".
+  listCreate(name: string, color?: string): Promise<void>;
 
   listDelete(slug: string): Promise<void>;
 
-  listAll(): Promise<{ slug: string; displayName: string }[]>;
+  // `color` is the list's own calendar-color prop (null if never set) —
+  // exposed so list_all's color filter has something to match against.
+  listAll(): Promise<{ slug: string; displayName: string; color: string | null }[]>;
 }

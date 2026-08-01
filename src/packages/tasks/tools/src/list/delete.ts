@@ -19,9 +19,9 @@ export function registerListDeleteTool(server: McpServer, deps: TaskToolsDeps): 
     "list_delete",
     {
       description:
-        "Delete a task list (the CalDAV collection and every task in it). " +
-        "No-op, not an error, if the slug doesn't exist. The name may be " +
-        "temporarily unavailable for reuse afterward.",
+        "Delete a task list and every task in it. No-op, not an error, if the " +
+        "slug doesn't exist. The name may be temporarily unavailable for reuse " +
+        "afterward.",
       annotations: {
         title: "Delete Task List",
         readOnlyHint: false,
