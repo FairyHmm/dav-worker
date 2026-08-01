@@ -2,6 +2,17 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { TaskToolsDeps } from "../deps.js";
 import { ok, err } from "../utils.js";
 import { ListSchema } from "../utils/schemas.js";
+import { withBatchSupport, runBatchTool, required, type Resolved } from "@dav-worker/batch-core";
+
+// list is the only field, required() — resolveItems' required() check
+// already rejects both `undefined` and `""`, which covers the same
+// empty-slug guard (davPath(basePath, "") resolves to the calendars home
+// collection itself, not a 404) list_create also needs, so the
+// hand-written `if (list === "")` this tool used to carry is redundant
+// now and has been dropped.
+const itemShape = {
+  list: required(ListSchema),
+};
 
 export function registerListDeleteTool(server: McpServer, deps: TaskToolsDeps): void {
   server.registerTool(
@@ -18,31 +29,28 @@ export function registerListDeleteTool(server: McpServer, deps: TaskToolsDeps): 
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: { list: ListSchema },
+      inputSchema: {
+        ...itemShape,
+        ...withBatchSupport(itemShape),
+      },
     },
-    async ({ list }) => {
-      // Same reasoning as list_create: an empty slug resolves to the
-      // calendars home collection itself (davPath(basePath, "") ===
-      // basePath), not a 404 — reject it here rather than letting it
-      // reach storage.listDelete.
-      if (list === "") {
-        return err(new Error("A task list slug is required."));
-      }
-      try {
-        // This DELETE succeeds against Nextcloud's calendar trashbin
-        // (default 30-day retention, `calendarRetentionObligation`),
-        // which soft-deletes rather than removing the collection outright
-        // — confirmed empirically: list_create against the same slug
-        // right after this still 405s as "already exists." There's no
-        // documented WebDAV call this function can make to force a
-        // permanent purge (unlike the files trashbin, calendars have no
-        // public restore/purge DAV endpoint) — that's server-side
-        // (`occ`) or Nextcloud Calendar-app-UI only.
-        await deps.storage.listDelete(list);
-        return ok(`Deleted task list "${list}".`);
-      } catch (e) {
-        return err(e);
-      }
-    },
+    async (params) =>
+      runBatchTool(params, itemShape, err, async ({ list }: Resolved<typeof itemShape, "list">) => {
+        try {
+          // This DELETE succeeds against Nextcloud's calendar trashbin
+          // (default 30-day retention, `calendarRetentionObligation`),
+          // which soft-deletes rather than removing the collection
+          // outright — confirmed empirically: list_create against the
+          // same slug right after this still 405s as "already exists."
+          // There's no documented WebDAV call this function can make to
+          // force a permanent purge (unlike the files trashbin,
+          // calendars have no public restore/purge DAV endpoint) —
+          // that's server-side (`occ`) or Nextcloud Calendar-app-UI only.
+          await deps.storage.listDelete(list);
+          return ok(`Deleted task list "${list}".`);
+        } catch (e) {
+          return err(e);
+        }
+      }),
   );
 }
