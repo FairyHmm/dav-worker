@@ -87,6 +87,12 @@ importers:
 
   src/packages/auth/upstream: {}
 
+  src/packages/batch/core:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+
   src/packages/calendar/contracts: {}
 
   src/packages/calendar/ical: {}
@@ -192,6 +198,9 @@ importers:
 
   src/packages/tasks/tools:
     dependencies:
+      '@dav-worker/batch-core':
+        specifier: workspace:*
+        version: link:../../batch/core
       '@dav-worker/calendar-ical':
         specifier: workspace:*
         version: link:../../calendar/ical
