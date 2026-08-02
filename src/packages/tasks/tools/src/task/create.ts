@@ -1,12 +1,8 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { TaskToolsDeps } from "../deps.js";
-import { ok, err } from "../utils.js";
-import {
-  TaskTitleSchema,
-  ListSchema,
-  EventIdSchema,
-} from "../utils/schemas.js";
-import { buildTaskComponent, linkTaskToEvent } from "../utils/mapping.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { TaskToolsDeps } from "../deps";
+import { ok, err } from "../utils";
+import { TaskTitleSchema, ListSchema, EventIdSchema } from "../utils/schemas";
+import { buildTaskComponent, linkTaskToEvent } from "../utils/mapping";
 import { wrapInCalendar, stringifyCalendar } from "@dav-worker/calendar-ical";
 import {
   withBatchSupport,
@@ -16,32 +12,29 @@ import {
   type Resolved,
 } from "@dav-worker/batch-core";
 
-// Item shape, individually optional so an item can omit a field and
-// inherit the matching top-level value (SPEC-BATCH.md: whole-value
-// replace, no merging). Reused for both the top-level params and each
-// entry in `items`.
-//
-// title/list are also tagged required() — .optional() only permits an
-// item to omit the field and inherit it, it doesn't mean the field can
-// stay empty after resolution; required() is what runBatchTool checks
-// post-fill, replacing hand-written `if (!title)`/`if (!list)` guards
-// (one is easy to forget per new field; this can't be).
-//
-// list is additionally locked(): the field determines *where* each
-// task is physically written, so silently letting individual batch
-// items target different lists is a footgun a caller is unlikely to
-// have intended without saying so explicitly. A batch either shares one
-// target list (top-level default) or the caller makes separate calls.
-const itemShape = {
-  title: required(TaskTitleSchema.optional()),
-  list: locked(required(ListSchema.optional())),
-  event_id: EventIdSchema,
-};
+function createItemShape() {
+  return {
+    title: required(TaskTitleSchema.optional()),
+    // locked(): `list` picks where each task is physically written,
+    // so batch items silently targeting different lists is a
+    // footgun — a batch shares one target list, or the caller makes
+    // separate calls.
+    list: locked(required(ListSchema.optional())),
+    event_id: EventIdSchema,
+  };
+}
+
+type CreateItem = Resolved<
+  ReturnType<typeof createItemShape>,
+  "title" | "list"
+>;
 
 export function registerTaskCreateTool(
   server: McpServer,
   deps: TaskToolsDeps,
 ): void {
+  const itemShape = createItemShape();
+
   server.registerTool(
     "task_create",
     {
@@ -59,40 +52,34 @@ export function registerTaskCreateTool(
       },
     },
     async (params) =>
-      runBatchTool(
-        params,
-        itemShape,
-        err,
-        async ({
-          title,
-          list,
-          event_id,
-        }: Resolved<typeof itemShape, "title" | "list">) => {
-          try {
-            const uid = crypto.randomUUID();
-            const todo = buildTaskComponent(uid, { title });
-
-            if (event_id) {
-              const failure = await linkTaskToEvent(
-                todo,
-                event_id,
-                deps.resolveEventDue,
-                "created",
-              );
-              if (failure) return err(new Error(failure));
-            }
-
-            const ics = stringifyCalendar(wrapInCalendar(todo));
-            await deps.storage.create(list, uid, ics);
-
-            const suffix = event_id ? ` (linked to event ${event_id})` : "";
-            return ok(
-              `Created task "${title}" (id: ${uid}) in ${list}${suffix}.`,
-            );
-          } catch (e) {
-            return err(e);
-          }
-        },
+      runBatchTool(params, itemShape, err, (item: CreateItem) =>
+        createTaskItem(deps, item),
       ),
   );
+}
+
+async function createTaskItem(deps: TaskToolsDeps, item: CreateItem) {
+  const { title, list, event_id } = item;
+  try {
+    const uid = crypto.randomUUID();
+    const todo = buildTaskComponent(uid, { title });
+
+    if (event_id) {
+      const failure = await linkTaskToEvent(
+        todo,
+        event_id,
+        deps.resolveEventDue,
+        "created",
+      );
+      if (failure) return err(new Error(failure));
+    }
+
+    const ics = stringifyCalendar(wrapInCalendar(todo));
+    await deps.storage.create(list, uid, ics);
+
+    const suffix = event_id ? ` (linked to event ${event_id})` : "";
+    return ok(`Created task "${title}" (id: ${uid}) in ${list}${suffix}.`);
+  } catch (e) {
+    return err(e);
+  }
 }

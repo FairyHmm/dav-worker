@@ -1,6 +1,6 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { TaskToolsDeps } from "../deps.js";
-import { ok, err } from "../utils.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { TaskToolsDeps } from "../deps";
+import { ok, err } from "../utils";
 import {
   ListSchema,
   EventIdSchema,
@@ -8,26 +8,39 @@ import {
   StatusSchema,
   SortSchema,
   TagsFilterSchema,
-} from "../utils/schemas.js";
-import { extractTaskSummaries } from "../utils/mapping.js";
-import type { TaskSummary } from "../utils/mapping.js";
-import { resolveTimeWindow } from "../utils/time.js";
+} from "../utils/schemas";
+import { extractTaskSummaries } from "../utils/mapping";
+import type { TaskSummary } from "../utils/mapping";
+import { resolveTimeWindow } from "../utils/time";
 import { basicToIso } from "@dav-worker/calendar-ical";
-import { withBatchSupport, runBatchTool, type Resolved } from "@dav-worker/batch-core";
+import {
+  withBatchSupport,
+  runBatchTool,
+  type Resolved,
+} from "@dav-worker/batch-core";
 
 // All filters are optional — nothing here is required() the way
 // list_create's `name` is, since an empty item (list_all's own tasks-
 // wide query) is a legitimate call, not a mistake.
-const itemShape = {
-  list: ListSchema.optional(),
-  event_id: EventIdSchema,
-  due: DueFilterSchema,
-  status: StatusSchema,
-  tags: TagsFilterSchema,
-  sort: SortSchema,
-};
+function createItemShape() {
+  return {
+    list: ListSchema.optional(),
+    event_id: EventIdSchema,
+    due: DueFilterSchema,
+    status: StatusSchema,
+    tags: TagsFilterSchema,
+    sort: SortSchema,
+  };
+}
 
-export function registerTaskListTool(server: McpServer, deps: TaskToolsDeps): void {
+type ListItem = Resolved<ReturnType<typeof createItemShape>, never>;
+
+export function registerTaskListTool(
+  server: McpServer,
+  deps: TaskToolsDeps,
+): void {
+  const itemShape = createItemShape();
+
   server.registerTool(
     "task_list",
     {
@@ -45,66 +58,84 @@ export function registerTaskListTool(server: McpServer, deps: TaskToolsDeps): vo
       },
     },
     async (params) =>
-      runBatchTool(
-        params,
-        itemShape,
-        err,
-        async ({ list, event_id, due, status, tags, sort }: Resolved<typeof itemShape, never>) => {
-          try {
-            const listNames = list ? [list] : (await deps.storage.listAll()).map((l) => l.slug);
-
-            const window = due ? resolveTimeWindow(due) : undefined;
-            const windowIso = window
-              ? { startIso: basicToIso(window.startUtc), endIso: basicToIso(window.endUtc) }
-              : undefined;
-
-            const results: Array<TaskSummary & { list: string }> = [];
-
-            for (const listName of listNames) {
-              const entries = await deps.storage.list(listName);
-              for (const entry of entries) {
-                for (const summary of extractTaskSummaries(entry.ics)) {
-                  if (event_id && summary.eventId !== event_id) continue;
-                  if (status && summary.status !== status) continue;
-                  // Split into required (plain, OR) and excluded ('-'
-                  // prefix, AND) per TagsFilterSchema's symmetry with
-                  // TagsSchema's write-side convention.
-                  if (tags && tags.length > 0) {
-                    const taskTags = summary.tags ?? [];
-                    const excluded = tags.filter((t) => t.startsWith("-")).map((t) => t.slice(1));
-                    const required = tags.filter((t) => !t.startsWith("-"));
-                    if (excluded.some((t) => taskTags.includes(t))) continue;
-                    if (required.length > 0 && !required.some((t) => taskTags.includes(t))) continue;
-                  }
-                  if (windowIso) {
-                    if (!summary.due) continue;
-                    if (summary.due < windowIso.startIso || summary.due >= windowIso.endIso) continue;
-                  }
-                  results.push({ ...summary, list: listName });
-                }
-              }
-            }
-
-            if (sort === "due") {
-              results.sort((a, b) => (a.due ?? "").localeCompare(b.due ?? ""));
-            } else if (sort === "completion") {
-              results.sort((a, b) => (a.percentComplete ?? 0) - (b.percentComplete ?? 0));
-            }
-
-            if (results.length === 0) return ok("No tasks found.");
-
-            const lines = results.map((t) => {
-              const duePart = t.due ? `due: ${t.due}, ` : "";
-              const statusPart = t.status ? `${t.status}, ` : "";
-              const tagsPart = t.tags && t.tags.length > 0 ? `tags: ${t.tags.join(", ")}, ` : "";
-              const linkPart = t.eventId ? `, linked to: ${t.eventId}` : "";
-              return `${t.title}  [${t.list}]  (${statusPart}${tagsPart}${duePart}id: ${t.uid}${linkPart})`;
-            });
-            return ok(lines.join("\n"));
-          } catch (e) {
-            return err(e);
-          }
-        },
+      runBatchTool(params, itemShape, err, (item: ListItem) =>
+        listTaskItem(deps, item),
       ),
   );
+}
+
+async function listTaskItem(deps: TaskToolsDeps, item: ListItem) {
+  const { list, event_id, due, status, tags, sort } = item;
+  try {
+    const listNames = list
+      ? [list]
+      : (await deps.storage.listAll()).map((l) => l.slug);
+
+    const window = due ? resolveTimeWindow(due) : undefined;
+    const windowIso = window
+      ? {
+          startIso: basicToIso(window.startUtc),
+          endIso: basicToIso(window.endUtc),
+        }
+      : undefined;
+
+    const results: Array<TaskSummary & { list: string }> = [];
+
+    for (const listName of listNames) {
+      const entries = await deps.storage.list(listName);
+      for (const entry of entries) {
+        for (const summary of extractTaskSummaries(entry.ics)) {
+          if (event_id && summary.eventId !== event_id) continue;
+          if (status && summary.status !== status) continue;
+          // Split into required (plain, OR) and excluded ('-'
+          // prefix, AND) per TagsFilterSchema's symmetry with
+          // TagsSchema's write-side convention.
+          if (tags && tags.length > 0) {
+            const taskTags = summary.tags ?? [];
+            const excluded = tags
+              .filter((t) => t.startsWith("-"))
+              .map((t) => t.slice(1));
+            const required = tags.filter((t) => !t.startsWith("-"));
+            if (excluded.some((t) => taskTags.includes(t))) continue;
+            if (
+              required.length > 0 &&
+              !required.some((t) => taskTags.includes(t))
+            )
+              continue;
+          }
+          if (windowIso) {
+            if (!summary.due) continue;
+            if (
+              summary.due < windowIso.startIso ||
+              summary.due >= windowIso.endIso
+            )
+              continue;
+          }
+          results.push({ ...summary, list: listName });
+        }
+      }
+    }
+
+    if (sort === "due") {
+      results.sort((a, b) => (a.due ?? "").localeCompare(b.due ?? ""));
+    } else if (sort === "completion") {
+      results.sort(
+        (a, b) => (a.percentComplete ?? 0) - (b.percentComplete ?? 0),
+      );
+    }
+
+    if (results.length === 0) return ok("No tasks found.");
+
+    const lines = results.map((t) => {
+      const duePart = t.due ? `due: ${t.due}, ` : "";
+      const statusPart = t.status ? `${t.status}, ` : "";
+      const tagsPart =
+        t.tags && t.tags.length > 0 ? `tags: ${t.tags.join(", ")}, ` : "";
+      const linkPart = t.eventId ? `, linked to: ${t.eventId}` : "";
+      return `${t.title}  [${t.list}]  (${statusPart}${tagsPart}${duePart}id: ${t.uid}${linkPart})`;
+    });
+    return ok(lines.join("\n"));
+  } catch (e) {
+    return err(e);
+  }
 }

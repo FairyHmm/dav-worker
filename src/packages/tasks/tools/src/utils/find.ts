@@ -3,11 +3,8 @@ import { WebDAVHttpError } from "@dav-worker/clients-webdav";
 
 export interface FindTaskResult {
   found: { list: string; entry: TaskEntry } | null;
-  // Lists that 404'd during the search (deleted collection, race with a
-  // concurrent list_delete, etc.) — mirrors calendar/tools' find.ts:
-  // these don't abort the search, but silently hiding them would make a
-  // real "not found" indistinguishable from "we skipped the list it's
-  // actually in".
+  // 404'd lists during the search — kept, not swallowed, so "not found"
+  // can't be hiding a list we actually skipped.
   warnings: string[];
 }
 
@@ -15,11 +12,8 @@ function listWarning(list: string): string {
   return `Task list "${list}" returned 404 (may have just been deleted). Skipped for this search.`;
 }
 
-// task_update/task_delete take only an id (CalDAV UID) — no list — per
-// SPEC-TASKS.md. Unlike calendar's findEventAcrossCalendars, there's no
-// static config to enumerate: lists are discovered fresh via
-// storage.listAll() every call, since a list can be created/deleted at
-// any time and there's no lists.toml to go stale.
+// Lists discovered fresh via storage.listAll() every call — no static
+// config to go stale, unlike calendar's findEventAcrossCalendars.
 export async function findTaskAcrossLists(
   storage: TaskStorage,
   uid: string,

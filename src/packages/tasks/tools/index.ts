@@ -1,20 +1,19 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { TaskToolsDeps } from "./src/deps.js";
-import { registerTaskCreateTool } from "./src/task/create.js";
-import { registerTaskListTool } from "./src/task/list.js";
-import { registerTaskUpdateTool } from "./src/task/update.js";
-import { registerTaskDeleteTool } from "./src/task/delete.js";
-import { registerListCreateTool } from "./src/list/create.js";
-import { registerListDeleteTool } from "./src/list/delete.js";
-import { registerListAllTool } from "./src/list/all.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { TaskToolsDeps } from "./src/deps";
+import { registerTaskCreateTool } from "./src/task/create";
+import { registerTaskListTool } from "./src/task/list";
+import { registerTaskUpdateTool } from "./src/task/update";
+import { registerTaskDeleteTool } from "./src/task/delete";
+import { registerListCreateTool } from "./src/list/create";
+import { registerListDeleteTool } from "./src/list/delete";
+import { registerListAllTool } from "./src/list/all";
 
-export type { TaskToolsDeps } from "./src/deps.js";
+export type { TaskToolsDeps } from "./src/deps";
 
-// Public entry point for this package, mirroring calendar/tools' shape
-// (SPEC-MONOREPO.md A.5): takes only TaskToolsDeps (a TaskStorage
-// implementation + resolveEventDue), never a platform type — so app/worker
-// and app/local can both call this with their own conforming storage.
-export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void {
+export function registerTaskTools(
+  server: McpServer,
+  deps: TaskToolsDeps,
+): void {
   registerListCreateTool(server, deps);
   registerListDeleteTool(server, deps);
   registerListAllTool(server, deps);

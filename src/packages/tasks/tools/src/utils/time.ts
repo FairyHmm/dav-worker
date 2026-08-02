@@ -1,13 +1,10 @@
-// Deliberately duplicated from calendar/tools/src/utils/time.ts (not
-// shared) — see SPEC-MONOREPO.md A.7: the only sanctioned cross-domain
-// edge is auth/upstream's Credential/TokenStore. `due` filtering needs the
-// exact same three window shapes (relative day-offsets, absolute dates, a
-// preset) that `schedule_list`'s `time` uses, but tasks stays ignorant of
-// calendar-tools' internals — this is a ~60-line utility, not a domain
-// concern worth a shared package.
+// Deliberately duplicated from calendar/tools' time.ts — see
+// SPEC-MONOREPO.md A.7.
 
 function startOfUtcDay(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  );
 }
 
 function startOfWeek(d: Date): Date {
@@ -29,7 +26,10 @@ function addDays(d: Date, n: number): Date {
 }
 
 function toBasicUtc(d: Date): string {
-  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  return d
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d+Z$/, "Z");
 }
 
 export type TimeWindowInput =
@@ -39,33 +39,48 @@ export type TimeWindowInput =
   | "week"
   | "month";
 
-export function resolveTimeWindow(
-  time: TimeWindowInput,
-): { startUtc: string; endUtc: string } {
+export function resolveTimeWindow(time: TimeWindowInput): {
+  startUtc: string;
+  endUtc: string;
+} {
   const today = startOfUtcDay(new Date());
 
   if (typeof time === "string") {
     switch (time) {
       case "today":
-        return { startUtc: toBasicUtc(today), endUtc: toBasicUtc(addDays(today, 1)) };
+        return {
+          startUtc: toBasicUtc(today),
+          endUtc: toBasicUtc(addDays(today, 1)),
+        };
       case "week": {
         const start = startOfWeek(today);
-        return { startUtc: toBasicUtc(start), endUtc: toBasicUtc(addDays(start, 7)) };
+        return {
+          startUtc: toBasicUtc(start),
+          endUtc: toBasicUtc(addDays(start, 7)),
+        };
       }
       case "month": {
         const start = startOfMonth(today);
-        return { startUtc: toBasicUtc(start), endUtc: toBasicUtc(startOfNextMonth(today)) };
+        return {
+          startUtc: toBasicUtc(start),
+          endUtc: toBasicUtc(startOfNextMonth(today)),
+        };
       }
       default: {
         const known = "today, week, month";
-        throw new Error(`Unknown time preset "${time}". Known presets: ${known}`);
+        throw new Error(
+          `Unknown time preset "${time}". Known presets: ${known}`,
+        );
       }
     }
   }
 
   const { from, to } = time;
   if (typeof from === "number" && typeof to === "number") {
-    return { startUtc: toBasicUtc(addDays(today, from)), endUtc: toBasicUtc(addDays(today, to)) };
+    return {
+      startUtc: toBasicUtc(addDays(today, from)),
+      endUtc: toBasicUtc(addDays(today, to)),
+    };
   }
   if (typeof from === "string" && typeof to === "string") {
     return {

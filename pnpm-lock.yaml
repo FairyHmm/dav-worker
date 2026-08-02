@@ -99,6 +99,9 @@ importers:
 
   src/packages/calendar/tools:
     dependencies:
+      '@dav-worker/batch-core':
+        specifier: workspace:*
+        version: link:../../batch/core
       '@dav-worker/calendar-contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -156,6 +159,9 @@ importers:
 
   src/packages/files/tools:
     dependencies:
+      '@dav-worker/batch-core':
+        specifier: workspace:*
+        version: link:../../batch/core
       '@dav-worker/files-contracts':
         specifier: workspace:*
         version: link:../contracts

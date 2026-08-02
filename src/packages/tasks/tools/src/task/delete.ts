@@ -1,19 +1,31 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { TaskToolsDeps } from "../deps.js";
-import { ok, err } from "../utils.js";
-import { TaskIdSchema } from "../utils/schemas.js";
-import { findTaskAcrossLists, formatWarnings } from "../utils/find.js";
-import { withBatchSupport, runBatchTool, required, type Resolved } from "@dav-worker/batch-core";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { TaskToolsDeps } from "../deps";
+import { ok, err } from "../utils";
+import { TaskIdSchema } from "../utils/schemas";
+import { findTaskAcrossLists, formatWarnings } from "../utils/find";
+import {
+  withBatchSupport,
+  runBatchTool,
+  required,
+  type Resolved,
+} from "@dav-worker/batch-core";
 
-// id is the only field — nothing to lock() against (no second field it
-// could diverge from), but it must be required() since an item can't
-// meaningfully omit its own identity and inherit a top-level default
-// the way `list`/`title` can on task_create.
-const itemShape = {
-  id: required(TaskIdSchema),
-};
+function createItemShape() {
+  return {
+    // required(): an item can't omit its own identity the way
+    // task_create's `list`/`title` can inherit a top-level default.
+    id: required(TaskIdSchema),
+  };
+}
 
-export function registerTaskDeleteTool(server: McpServer, deps: TaskToolsDeps): void {
+type DeleteItem = Resolved<ReturnType<typeof createItemShape>, "id">;
+
+export function registerTaskDeleteTool(
+  server: McpServer,
+  deps: TaskToolsDeps,
+): void {
+  const itemShape = createItemShape();
+
   server.registerTool(
     "task_delete",
     {
@@ -32,20 +44,29 @@ export function registerTaskDeleteTool(server: McpServer, deps: TaskToolsDeps): 
       },
     },
     async (params) =>
-      runBatchTool(params, itemShape, err, async ({ id }: Resolved<typeof itemShape, "id">) => {
-        try {
-          const { found, warnings } = await findTaskAcrossLists(deps.storage, id);
-          if (!found) {
-            // Same reasoning as schedule_delete: if any list was skipped
-            // (404), report it rather than a clean "if it existed" no-op
-            // that could be hiding a real, undeleted task.
-            return ok(`${formatWarnings(warnings)}Deleted task (id: ${id}), if it existed.`);
-          }
-          await deps.storage.delete(found.list, id);
-          return ok(`${formatWarnings(warnings)}Deleted task (id: ${id}) from ${found.list}.`);
-        } catch (e) {
-          return err(e);
-        }
-      }),
+      runBatchTool(params, itemShape, err, (item: DeleteItem) =>
+        deleteTaskItem(deps, item),
+      ),
   );
+}
+
+async function deleteTaskItem(deps: TaskToolsDeps, item: DeleteItem) {
+  const { id } = item;
+  try {
+    const { found, warnings } = await findTaskAcrossLists(deps.storage, id);
+    if (!found) {
+      // Same reasoning as schedule_delete: if any list was skipped
+      // (404), report it rather than a clean "if it existed" no-op
+      // that could be hiding a real, undeleted task.
+      return ok(
+        `${formatWarnings(warnings)}Deleted task (id: ${id}), if it existed.`,
+      );
+    }
+    await deps.storage.delete(found.list, id);
+    return ok(
+      `${formatWarnings(warnings)}Deleted task (id: ${id}) from ${found.list}.`,
+    );
+  } catch (e) {
+    return err(e);
+  }
 }

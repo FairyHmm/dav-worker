@@ -1,14 +1,11 @@
 import { z } from "zod";
 
-// No config-based collectionSchema anymore — `list` is a free-form slug
-// (SPEC-TASKS.md), discovered via list_all, not looked up in a category map.
+// Free-form slug (SPEC-TASKS.md) — no category-map lookup.
 export const ListSchema = z
   .string()
   .describe("Which task list this belongs to.");
 
-// list_delete's variant: the list is the thing being acted on, not a
-// container a task belongs to — ListSchema's "belongs to" framing is
-// wrong here, so this gets its own wording rather than reusing that text.
+// list_delete: acted-on, not "belongs to" — separate wording from ListSchema.
 export const ListTargetSchema = z
   .string()
   .describe("Which task list to delete.");
@@ -28,13 +25,8 @@ export const ListCategorySchema = z
 
 export const TaskTitleSchema = z.string().describe("The task's title.");
 
-// No direct `due` input (SPEC-TASKS.md) — a task's date always comes from
-// its linked event via `event_id`. Genuinely undated, unlinked tasks
-// belong in Markdown, not here.
-//
-// task_create's shape: string only (no unlink concept — nothing to
-// unlink on a brand-new task). task_update reuses the base string schema
-// via UpdateEventIdSchema below, adding the "unlink" literal.
+// No direct `due` input — always derived from the linked event
+// (SPEC-TASKS.md). task_update adds "unlink" via UpdateEventIdSchema below.
 export const EventIdSchema = z
   .string()
   .optional()
@@ -45,19 +37,14 @@ export const EventIdSchema = z
 
 export const TaskIdSchema = z.string().describe("Which task to act on.");
 
-// task_update's variant of EventIdSchema: previously there was no way to
-// remove an existing event_id link short of delete-and-recreate under a
-// new UID, and the fix for that (a separate `unlink_event` boolean) had
-// its own problem — it could be passed alongside a real `event_id` in the
-// same call, an ambiguous combination that had to be resolved by fiat
-// ("event_id wins"). Folding "unlink" into this field's own value space
-// makes that combination impossible to express instead of merely resolved.
+// "unlink" folded into the value itself, not a separate boolean — makes
+// "both event_id and unlink passed" inexpressible rather than resolved by fiat.
 export const UpdateEventIdSchema = z
   .union([z.string(), z.literal("unlink")])
   .optional()
   .describe(
-    "Same as task_create's event link, or pass 'unlink' to remove any existing " +
-      "attachment and clear the due date. Omit to leave as is.",
+    "An event to attach this task to, giving it a due date matching that event's start, " +
+      "or 'unlink' to remove any existing attachment and clear the due date. Omit to leave as is.",
   );
 
 export const DueFilterSchema = z
@@ -89,15 +76,9 @@ export const SortSchema = z
       "(least complete first). Omit to leave results in their stored order.",
   );
 
-// task_update's new-value field, separate from StatusSchema above (that
-// one is task_list's *filter* enum, which needs three coarse buckets —
-// "in progress" isn't given percent granularity there because nobody
-// filters for an exact percent). This one is a single field rather than
-// separate `cancelled`/`progress` fields: those two were genuinely
-// mutually exclusive in practice (progress is never touched once a task
-// is cancelled), so having them as separate params meant an ambiguous
-// combination (both passed at once) had to be resolved by fiat instead of
-// simply being inexpressible.
+// Single field, not separate cancelled/progress params — those are
+// mutually exclusive in practice, so this makes the ambiguous "both passed"
+// case inexpressible rather than resolved by fiat.
 export const UpdateProgressSchema = z
   .union([z.number().min(0).max(100), z.literal("cancelled")])
   .optional()
@@ -133,17 +114,11 @@ export const UrlSchema = z
       "to remove it. Omit to leave unchanged.",
   );
 
-// task_list's *read* side counterpart to TagsSchema above (which is
-// write-only add/remove semantics). Reuses the same '-' prefix
-// convention for symmetry, but with filter meaning instead of mutation
-// meaning: a plain string requires a match (OR among plain tags), a
-// '-'-prefixed string excludes any task carrying it (AND — exclusions
-// always apply, regardless of what else matches).
 export const TagsFilterSchema = z
   .array(z.string())
   .optional()
   .describe(
-    "Restrict results by tag, using the same plain/'-'-prefixed convention as tag " +
-      "edits (plain = must have at least one, '-' = must not have). Omit to include " +
+    "Restrict results by tag. A plain string requires at least one match; a string " +
+      "prefixed with '-' excludes any task carrying it, e.g. '-urgent'. Omit to include " +
       "tasks regardless of tags.",
   );
