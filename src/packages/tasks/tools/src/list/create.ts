@@ -35,8 +35,7 @@ export function registerListCreateTool(
   server.registerTool(
     "list_create",
     {
-      description:
-        "Create a new task list, separate from event calendars. Optionally tag it with a calendar category.",
+      description: "Create a new task list.",
       annotations: {
         title: "Create Task List",
         readOnlyHint: false,
