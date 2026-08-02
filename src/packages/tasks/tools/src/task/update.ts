@@ -44,10 +44,7 @@ export function registerTaskUpdateTool(server: McpServer, deps: TaskToolsDeps): 
   server.registerTool(
     "task_update",
     {
-      description:
-        "Update a task by id, changing only the fields provided: title, " +
-        "progress or cancellation, priority, tags, URL, event link, or " +
-        "list.",
+      description: "Update a task by id, changing only the fields provided.",
       annotations: {
         title: "Update Task",
         readOnlyHint: false,

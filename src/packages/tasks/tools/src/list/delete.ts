@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { TaskToolsDeps } from "../deps.js";
 import { ok, err } from "../utils.js";
-import { ListSchema } from "../utils/schemas.js";
+import { ListTargetSchema } from "../utils/schemas.js";
 import { withBatchSupport, runBatchTool, required, type Resolved } from "@dav-worker/batch-core";
 
 // list is the only field, required() — resolveItems' required() check
@@ -11,7 +11,7 @@ import { withBatchSupport, runBatchTool, required, type Resolved } from "@dav-wo
 // hand-written `if (list === "")` this tool used to carry is redundant
 // now and has been dropped.
 const itemShape = {
-  list: required(ListSchema),
+  list: required(ListTargetSchema),
 };
 
 export function registerListDeleteTool(server: McpServer, deps: TaskToolsDeps): void {
@@ -20,8 +20,8 @@ export function registerListDeleteTool(server: McpServer, deps: TaskToolsDeps): 
     {
       description:
         "Delete a task list and every task in it. No-op, not an error, if the " +
-        "slug doesn't exist. The name may be temporarily unavailable for reuse " +
-        "afterward.",
+        "slug doesn't exist. The list goes to the trashbin rather than being " +
+        "removed outright, so the same slug can't be reused right away.",
       annotations: {
         title: "Delete Task List",
         readOnlyHint: false,

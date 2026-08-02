@@ -6,6 +6,13 @@ export const ListSchema = z
   .string()
   .describe("Which task list this belongs to.");
 
+// list_delete's variant: the list is the thing being acted on, not a
+// container a task belongs to — ListSchema's "belongs to" framing is
+// wrong here, so this gets its own wording rather than reusing that text.
+export const ListTargetSchema = z
+  .string()
+  .describe("Which task list to delete.");
+
 export const ListNameSchema = z.string().describe("The list's display name.");
 
 // Plain z.string() rather than a z.enum() of known categories — the valid
@@ -49,9 +56,8 @@ export const UpdateEventIdSchema = z
   .union([z.string(), z.literal("unlink")])
   .optional()
   .describe(
-    "Attach this task to an event (giving it a due date matching that event's start), " +
-      "or pass 'unlink' to remove any existing attachment and clear the due date. " +
-      "Omit to leave the task's current attachment and due date as is.",
+    "Same as task_create's event link, or pass 'unlink' to remove any existing " +
+      "attachment and clear the due date. Omit to leave as is.",
   );
 
 export const DueFilterSchema = z
@@ -137,7 +143,7 @@ export const TagsFilterSchema = z
   .array(z.string())
   .optional()
   .describe(
-    "Restrict results by tag. A plain string requires at least one of the listed plain " +
-      "tags to be present; a string prefixed with '-' excludes any task carrying that tag, " +
-      "e.g. '-urgent'. Omit to include tasks regardless of tags.",
+    "Restrict results by tag, using the same plain/'-'-prefixed convention as tag " +
+      "edits (plain = must have at least one, '-' = must not have). Omit to include " +
+      "tasks regardless of tags.",
   );

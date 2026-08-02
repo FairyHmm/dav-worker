@@ -45,10 +45,7 @@ export function registerTaskCreateTool(
   server.registerTool(
     "task_create",
     {
-      description:
-        "Create a task in a task list. Optionally link it to an event via " +
-        "`event_id`, which gives the task a due date matching the event's " +
-        "start.",
+      description: "Create a task in a task list.",
       annotations: {
         title: "Create Task",
         readOnlyHint: false,

@@ -31,7 +31,7 @@ export function registerTaskListTool(server: McpServer, deps: TaskToolsDeps): vo
   server.registerTool(
     "task_list",
     {
-      description: "List tasks.",
+      description: "List tasks, optionally filtered and sorted.",
       annotations: {
         title: "List Tasks",
         readOnlyHint: true,
