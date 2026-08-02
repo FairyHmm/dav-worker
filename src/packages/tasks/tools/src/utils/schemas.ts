@@ -126,3 +126,18 @@ export const UrlSchema = z
     "A link to associate with the task, e.g. a related note. Pass an empty string " +
       "to remove it. Omit to leave unchanged.",
   );
+
+// task_list's *read* side counterpart to TagsSchema above (which is
+// write-only add/remove semantics). Reuses the same '-' prefix
+// convention for symmetry, but with filter meaning instead of mutation
+// meaning: a plain string requires a match (OR among plain tags), a
+// '-'-prefixed string excludes any task carrying it (AND — exclusions
+// always apply, regardless of what else matches).
+export const TagsFilterSchema = z
+  .array(z.string())
+  .optional()
+  .describe(
+    "Restrict results by tag. A plain string requires at least one of the listed plain " +
+      "tags to be present; a string prefixed with '-' excludes any task carrying that tag, " +
+      "e.g. '-urgent'. Omit to include tasks regardless of tags.",
+  );
