@@ -6,6 +6,7 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "dependencies": {
+    "@dav-worker/batch-core": "workspace:*",
     "@dav-worker/calendar-contracts": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/clients-webdav": "workspace:*",

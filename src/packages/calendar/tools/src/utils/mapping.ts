@@ -16,11 +16,8 @@ import {
   setRRule,
 } from "@dav-worker/calendar-ical";
 
-// Maps dav-worker's own request/response field names (title, start, end,
-// description, location) onto RFC 5545 VEVENT properties, via ical/'s
-// generic get/set helpers. This mapping is deliberately NOT in ical/ itself
-// — ical/ knows RFC 5545, not dav-worker's schema (see SPEC.md's project
-// structure notes).
+// Maps dav-worker's field names onto RFC 5545 VEVENT properties. Kept out
+// of ical/ itself, which knows RFC 5545, not this schema.
 
 export interface EventFields {
   title?: string;
@@ -37,11 +34,8 @@ export interface EventSummary {
   location?: string;
   start: string;
   end: string;
-  // Present when this summary came from an <C:expand>-ed occurrence of a
-  // recurring event (RECURRENCE-ID on the VEVENT) rather than a
-  // non-recurring event or an un-expanded master. Same ISO shape that
-  // occurrence-targeted update/delete will take as input, so callers can
-  // round-trip a value straight from a list result into those calls.
+  // Present for an expanded occurrence of a recurring event; same shape
+  // occurrence-targeted update/delete take, so it round-trips directly.
   occurrence?: string;
 }
 
@@ -58,13 +52,16 @@ export function buildEventComponent(
   return event;
 }
 
-// Applies only the fields present in `fields` (undefined = leave as-is),
-// then bumps DTSTAMP/LAST-MODIFIED — mirrors the Python reference's
-// "update only provided properties" merge behaviour.
-export function applyEventFields(event: ICalComponent, fields: EventFields): void {
+// Applies only fields present in `fields` (undefined = leave as-is).
+export function applyEventFields(
+  event: ICalComponent,
+  fields: EventFields,
+): void {
   if (fields.title !== undefined) setText(event, "SUMMARY", fields.title);
-  if (fields.description !== undefined) setText(event, "DESCRIPTION", fields.description);
-  if (fields.location !== undefined) setText(event, "LOCATION", fields.location);
+  if (fields.description !== undefined)
+    setText(event, "DESCRIPTION", fields.description);
+  if (fields.location !== undefined)
+    setText(event, "LOCATION", fields.location);
   if (fields.start !== undefined) setDateTime(event, "DTSTART", fields.start);
   if (fields.end !== undefined) setDateTime(event, "DTEND", fields.end);
 
@@ -73,28 +70,29 @@ export function applyEventFields(event: ICalComponent, fields: EventFields): voi
   event.properties["LAST-MODIFIED"] = [{ value: stamp, params: {} }];
 }
 
-// Friendlier daily/weekly schema (SPEC-SCHEDULES.md "Recurring events"),
-// not raw RRULE input. `until`, if given, is an ISO date/date-time like the
-// rest of dav-worker's schema — converted to RFC 5545 basic format here so
-// callers never have to think in RRULE's wire format.
+// `until`, if given, is ISO like the rest of dav-worker's schema —
+// converted to RFC 5545 basic format here so callers stay ISO-only.
 export interface RecurrenceFields {
   freq: "daily" | "weekly";
   interval?: number;
   until?: string;
 }
 
-export function applyRecurrence(event: ICalComponent, recurrence: RecurrenceFields): void {
+export function applyRecurrence(
+  event: ICalComponent,
+  recurrence: RecurrenceFields,
+): void {
   setRRule(event, {
     freq: recurrence.freq === "daily" ? "DAILY" : "WEEKLY",
     interval: recurrence.interval,
-    until: recurrence.until !== undefined ? isoToBasic(recurrence.until) : undefined,
+    until:
+      recurrence.until !== undefined ? isoToBasic(recurrence.until) : undefined,
   });
 }
 
-// Builds a travel-buffer VEVENT (SPEC-SCHEDULES.md): a plain event carrying
-// a custom X-DAV-WORKER-TRAVEL-FOR property pointing at the parent event's
-// UID. Deliberately separate from buildEventComponent — buffers have no
-// description/location and always need the linking property set.
+// A plain event carrying X-DAV-WORKER-TRAVEL-FOR, pointing at the parent
+// event's UID. Separate from buildEventComponent since buffers always need
+// the linking property and never carry description/location.
 export function buildTravelBufferComponent(
   uid: string,
   parentUid: string,
@@ -110,13 +108,12 @@ export function buildTravelBufferComponent(
   return event;
 }
 
-// Occurrence-targeting helpers (SPEC-SCHEDULES.md "Recurring events").
 // A VEVENT resource can hold a recurring master (no RECURRENCE-ID) plus
-// zero or more detached override VEVENTs (RECURRENCE-ID set), all sharing
-// one UID in one .ics resource. These distinguish the two and build a new
-// override from the master.
+// zero or more detached overrides (RECURRENCE-ID set), sharing one UID.
 
-export function findMasterEvent(events: ICalComponent[]): ICalComponent | undefined {
+export function findMasterEvent(
+  events: ICalComponent[],
+): ICalComponent | undefined {
   return events.find((e) => !e.properties["RECURRENCE-ID"]);
 }
 
@@ -125,19 +122,19 @@ export function findOccurrenceOverride(
   occurrenceIso: string,
 ): ICalComponent | undefined {
   const basic = isoToBasic(occurrenceIso);
-  return events.find((e) => e.properties["RECURRENCE-ID"]?.[0]?.value === basic);
+  return events.find(
+    (e) => e.properties["RECURRENCE-ID"]?.[0]?.value === basic,
+  );
 }
 
-// Clones a recurring master into a standalone override VEVENT for one
-// instance: same UID, RECURRENCE-ID set to the targeted occurrence, RRULE/
-// EXDATE stripped (an override is a single instance, not itself recurring),
-// DTSTART/DTEND shifted to the occurrence's start while preserving the
-// master's original duration. Caller applies field edits on top via
-// applyEventFields() afterward — this only handles the detach itself.
-// Per SPEC-SCHEDULES.md's idempotence contract, callers must check
-// findOccurrenceOverride() first and only fall back to this when no
-// override exists yet for that occurrence.
-export function detachOccurrence(master: ICalComponent, occurrenceIso: string): ICalComponent {
+// Clones a recurring master into a standalone override for one instance:
+// RRULE/EXDATE stripped, DTSTART/DTEND shifted to the occurrence while
+// preserving the master's duration. Caller applies field edits afterward.
+// Idempotence is the caller's job — check findOccurrenceOverride() first.
+export function detachOccurrence(
+  master: ICalComponent,
+  occurrenceIso: string,
+): ICalComponent {
   const clone = cloneComponent(master);
   removeProperty(clone, "RRULE");
   removeProperty(clone, "EXDATE");
@@ -151,9 +148,15 @@ export function detachOccurrence(master: ICalComponent, occurrenceIso: string): 
 
   if (masterStart && masterEnd) {
     const durationMs =
-      new Date(basicToIso(masterEnd.raw)).getTime() - new Date(basicToIso(masterStart.raw)).getTime();
-    const occurrenceEndIso = new Date(new Date(occurrenceIso).getTime() + durationMs).toISOString();
-    setDateTime(clone, "DTEND", occurrenceEndIso, { allDay: masterEnd.isDate, tzid: masterEnd.tzid });
+      new Date(basicToIso(masterEnd.raw)).getTime() -
+      new Date(basicToIso(masterStart.raw)).getTime();
+    const occurrenceEndIso = new Date(
+      new Date(occurrenceIso).getTime() + durationMs,
+    ).toISOString();
+    setDateTime(clone, "DTEND", occurrenceEndIso, {
+      allDay: masterEnd.isDate,
+      tzid: masterEnd.tzid,
+    });
   }
 
   return clone;
@@ -173,12 +176,9 @@ function summarizeVevent(vevent: ICalComponent): EventSummary {
   };
 }
 
-// A single ReportEntry's calendar-data can contain more than one VEVENT:
-// <c:expand> (report.ts's timeRangeQueryBody) returns a recurring master's
-// matched occurrences as multiple VEVENT blocks inside ONE response's
-// calendar-data, not as separate <d:response> entries per occurrence. Every
-// VEVENT in the blob is a real, distinct occurrence that must be surfaced —
-// callers (list.ts, free.ts) need all of them, not just the first.
+// <c:expand> can return a recurring master's matched occurrences as
+// multiple VEVENT blocks in one entry — every one is a distinct occurrence
+// callers need, not just the first.
 export function extractEventSummaries(entry: ReportEntry): EventSummary[] {
   if (!entry.calendarData) return [];
   const cal = parseCalendar(entry.calendarData);

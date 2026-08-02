@@ -1,17 +1,15 @@
-// Resolves nc_schedule_*'s three time-window shapes (relative day-offsets,
-// absolute dates, or a named preset) into RFC 5545 UTC basic-format
-// start/end strings for CalDAV time-range REPORT queries. All arithmetic is
-// done in UTC calendar days — no local-timezone reasoning, consistent with
-// ical/component.ts's decision not to carry an IANA tz database.
+// All arithmetic is UTC calendar days — no local-timezone reasoning,
+// no IANA tz database (see ical/component.ts).
 
 function startOfUtcDay(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  );
 }
 
-// Calendar-boundary windows, not rolling day-offsets: "week" is the
-// Monday–Sunday containing today, "month" is the 1st–last day of the
-// current month. Distinct from the { from, to } numeric-offset shape,
-// which IS rolling (e.g. { from: 0, to: 7 } for "next 7 days").
+// Calendar-boundary windows ("week" = Mon–Sun containing today, "month" =
+// 1st–last of current month), distinct from the rolling { from, to }
+// numeric-offset shape (e.g. { from: 0, to: 7 } = "next 7 days").
 function startOfWeek(d: Date): Date {
   // getUTCDay(): 0=Sun..6=Sat. Shift so Monday is the start.
   const dow = d.getUTCDay();
@@ -32,18 +30,22 @@ function addDays(d: Date, n: number): Date {
 }
 
 function toBasicUtc(d: Date): string {
-  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  return d
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d+Z$/, "Z");
 }
 
-// Exposed for nc_schedule_free, which needs to turn REPORT-window boundaries
-// and event start/end values (both already RFC 5545 basic UTC strings) into
-// Dates for gap arithmetic, then back into basic UTC for output.
+// Turns REPORT-window boundaries and event start/end (basic UTC strings)
+// into Dates for gap arithmetic, and back.
 export const dateToBasicUtc = toBasicUtc;
 
 export function basicUtcToDate(basic: string): Date {
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/.exec(basic);
   if (!m) {
-    throw new Error(`Cannot parse date-time value "${basic}" as RFC 5545 basic UTC.`);
+    throw new Error(
+      `Cannot parse date-time value "${basic}" as RFC 5545 basic UTC.`,
+    );
   }
   const [, y, mo, d, h, mi, s] = m;
   return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
@@ -62,12 +64,10 @@ export function parseDurationMs(duration: string): number {
   return (hours * 60 + minutes) * 60_000;
 }
 
-// Shifts an ISO 8601 date-time by `ms`, for travel-buffer start/end math
-// (SPEC-SCHEDULES.md). Round-trips through Date, so the output is always a
-// UTC "Z" string even when the input was floating local time — acceptable
-// here since this is purely relative offset arithmetic around a single
-// reference point, and dav-worker doesn't carry an IANA tz database anyway
-// (see ical/component.ts's isoToBasic).
+// Shifts an ISO date-time by `ms`, for travel-buffer start/end math.
+// Round-trips through Date, so output is always UTC "Z" even when the
+// input was floating local — fine for pure relative-offset arithmetic
+// (no IANA tz database here, see ical/component.ts).
 export function shiftIso(iso: string, ms: number): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) {
@@ -83,9 +83,10 @@ export type TimeWindowInput =
   | "week"
   | "month";
 
-export function resolveTimeWindow(
-  time: TimeWindowInput,
-): { startUtc: string; endUtc: string } {
+export function resolveTimeWindow(time: TimeWindowInput): {
+  startUtc: string;
+  endUtc: string;
+} {
   const today = startOfUtcDay(new Date());
 
   if (typeof time === "string") {
@@ -111,7 +112,9 @@ export function resolveTimeWindow(
       }
       default: {
         const known = "today, week, month";
-        throw new Error(`Unknown time preset "${time}". Known presets: ${known}`);
+        throw new Error(
+          `Unknown time preset "${time}". Known presets: ${known}`,
+        );
       }
     }
   }

@@ -1,16 +1,21 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CalendarToolsDeps } from "../deps.js";
-import { ok, err } from "../utils.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { CalendarToolsDeps } from "../deps";
+import { ok, err } from "../utils";
 import { z } from "zod";
-import { categorySchema, TimeWindowSchema } from "../utils/schemas.js";
-import { resolveCalendarName, allCalendarNames } from "../calendars.js";
+import { categorySchema, TimeWindowSchema } from "../utils/schemas";
+import { resolveCalendarName, allCalendarNames } from "../calendars";
 import {
   resolveTimeWindow,
   parseDurationMs,
   basicUtcToDate,
   dateToBasicUtc,
-} from "../utils/time.js";
-import { extractEventSummaries } from "../utils/mapping.js";
+} from "../utils/time";
+import { extractEventSummaries } from "../utils/mapping";
+import {
+  withBatchSupport,
+  runBatchTool,
+  type Resolved,
+} from "@dav-worker/batch-core";
 
 interface Interval {
   start: Date;
@@ -54,14 +59,28 @@ function findGaps(
   return gaps;
 }
 
-export function registerScheduleFreeTool(server: McpServer, deps: CalendarToolsDeps): void {
+function createItemShape(deps: CalendarToolsDeps) {
+  return {
+    duration: z.string().describe("Minimum slot length, e.g. '1h', '30m'."),
+    between: TimeWindowSchema,
+    category: categorySchema(deps.config).optional(),
+  };
+}
+
+type FreeItem = Resolved<ReturnType<typeof createItemShape>, never>;
+
+export function registerScheduleFreeTool(
+  server: McpServer,
+  deps: CalendarToolsDeps,
+): void {
+  const itemShape = createItemShape(deps);
+
   server.registerTool(
     "schedule_free",
     {
       description:
         "Find available time slots of at least `duration` within a window. " +
-        "Omit `category` to search across all configured calendars — a slot " +
-        "must be free on every searched calendar to count as available.",
+        "A slot must be free on every searched calendar to count.",
       annotations: {
         title: "Find Free Time",
         readOnlyHint: true,
@@ -70,56 +89,61 @@ export function registerScheduleFreeTool(server: McpServer, deps: CalendarToolsD
         openWorldHint: true,
       },
       inputSchema: {
-        duration: z.string().describe("Minimum slot length, e.g. '1h', '30m'."),
-        between: TimeWindowSchema,
-        category: categorySchema(deps.config).optional(),
+        ...itemShape,
+        ...withBatchSupport(itemShape),
       },
     },
-    async ({ duration, between, category }) => {
-      try {
-        const minSlotMs = parseDurationMs(duration);
-        const { startUtc, endUtc } = resolveTimeWindow(between);
-        const windowStart = basicUtcToDate(startUtc);
-        const windowEnd = basicUtcToDate(endUtc);
-
-        const client = deps.storage;
-        const calendarNames = category
-          ? [resolveCalendarName(deps.config, category)]
-          : allCalendarNames(deps.config);
-
-        const busy: Interval[] = [];
-        for (const calendarName of calendarNames) {
-          const entries = await client.listByTimeRange(
-            calendarName,
-            "VEVENT",
-            startUtc,
-            endUtc,
-          );
-          for (const entry of entries) {
-            for (const summary of extractEventSummaries(entry)) {
-              if (!summary.start || !summary.end) continue;
-              busy.push({
-                start: basicUtcToDate(summary.start),
-                end: basicUtcToDate(summary.end),
-              });
-            }
-          }
-        }
-        busy.sort((a, b) => a.start.getTime() - b.start.getTime());
-
-        const gaps = findGaps(busy, windowStart, windowEnd, minSlotMs);
-
-        if (gaps.length === 0) {
-          return ok("No available slots of that length in this window.");
-        }
-
-        const lines = gaps.map(
-          (g) => `${dateToBasicUtc(g.start)} \u2013 ${dateToBasicUtc(g.end)}`,
-        );
-        return ok(lines.join("\n"));
-      } catch (e) {
-        return err(e);
-      }
-    },
+    async (params) =>
+      runBatchTool(params, itemShape, err, (item: FreeItem) =>
+        findFreeSlotsItem(deps, item),
+      ),
   );
+}
+
+async function findFreeSlotsItem(deps: CalendarToolsDeps, item: FreeItem) {
+  const { duration, between, category } = item;
+  try {
+    const minSlotMs = parseDurationMs(duration);
+    const { startUtc, endUtc } = resolveTimeWindow(between);
+    const windowStart = basicUtcToDate(startUtc);
+    const windowEnd = basicUtcToDate(endUtc);
+
+    const client = deps.storage;
+    const calendarNames = category
+      ? [resolveCalendarName(deps.config, category)]
+      : allCalendarNames(deps.config);
+
+    const busy: Interval[] = [];
+    for (const calendarName of calendarNames) {
+      const entries = await client.listByTimeRange(
+        calendarName,
+        "VEVENT",
+        startUtc,
+        endUtc,
+      );
+      for (const entry of entries) {
+        for (const summary of extractEventSummaries(entry)) {
+          if (!summary.start || !summary.end) continue;
+          busy.push({
+            start: basicUtcToDate(summary.start),
+            end: basicUtcToDate(summary.end),
+          });
+        }
+      }
+    }
+    busy.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    const gaps = findGaps(busy, windowStart, windowEnd, minSlotMs);
+
+    if (gaps.length === 0) {
+      return ok("No available slots of that length in this window.");
+    }
+
+    const lines = gaps.map(
+      (g) => `${dateToBasicUtc(g.start)} \u2013 ${dateToBasicUtc(g.end)}`,
+    );
+    return ok(lines.join("\n"));
+  } catch (e) {
+    return err(e);
+  }
 }

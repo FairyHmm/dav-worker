@@ -1,13 +1,6 @@
-// Category/slug/color map for calendars.csv. Replaces the old
-// calendars.toml's two-table shape ([calendars] category->slug,
-// [colors] category->color) with one CSV, one row per calendar, all three
-// columns required and mutually unique — category is the primary interface
-// tool calls use, slug is the CalDAV calendar name for calendar queries,
-// color is the task-list anchor for task tools.
-//
-// Parsing builds three indexed lookup maps (by category, by slug, by
-// color) rather than returning the raw row array, so every lookup
-// direction is O(1) and callers never re-scan rows themselves.
+// One row per calendar: category is the interface tool calls use, slug is
+// the CalDAV calendar name, color is the task-list anchor for task tools.
+// All three required and mutually unique.
 export interface CalendarRow {
   category: string;
   slug: string;
@@ -22,18 +15,14 @@ export interface CalendarConfig {
 
 const EXPECTED_HEADER = ["category", "slug", "color"];
 
-// Enforced at parse time, not left to the CalDAV round-trip: `color` gets
-// written verbatim into ic:calendar-color on the live collection
-// (tasks.ts listCreate) with no server-side validation of its shape, so a
-// malformed value here would otherwise persist silently and only surface
-// later as a list_all color filter that never matches anything. #RGB and
-// #RRGGBB are both valid CSS/iCal hex forms; that's all Nextcloud's own
-// color picker emits, so that's all this accepts.
+// Written verbatim into ic:calendar-color with no server-side validation,
+// so a malformed value would otherwise persist silently and only surface
+// later as a color filter that never matches. #RGB/#RRGGBB is all
+// Nextcloud's own color picker emits.
 const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-// Hand-rolled: the format has no quoted/escaped fields to worry about
-// (category, slug, and hex color are all plain unquoted tokens), so a real
-// CSV parser would be one more dependency for nothing it actually buys us.
+// Hand-rolled: no quoted/escaped fields to worry about, so a real CSV
+// parser buys nothing here.
 function parseRows(raw: string): CalendarRow[] {
   const lines = raw
     .split("\n")
@@ -87,10 +76,8 @@ export function parseCalendarConfig(raw: string): CalendarConfig {
   const bySlug = new Map<string, CalendarRow>();
   const byColor = new Map<string, CalendarRow>();
 
-  // Same guard repeated for each of the row's three mutually-unique
-  // columns — a closure over the maps-under-construction, not lifted out
-  // to resolveRow above, since that helper is about *reading* a finished
-  // CalendarConfig and this is about *building* one row at a time.
+  // One column-uniqueness guard, closed over the maps under construction
+  // (building, not the read-side resolveRow below).
   const claim = (
     map: Map<string, CalendarRow>,
     key: string,
@@ -111,11 +98,8 @@ export function parseCalendarConfig(raw: string): CalendarConfig {
   return { byCategory, bySlug, byColor };
 }
 
-// Shared shape behind resolveCalendarName/resolveCategoryColor/
-// resolveCategoryByColor below: look a key up in one of CalendarConfig's
-// three maps, or throw with the map's own key set as the "known values"
-// list. `what` only feeds the error message — the three call sites differ
-// solely in which map and label they pass in.
+// Backs resolveCalendarName/resolveCategoryColor/resolveCategoryByColor —
+// look up a key or throw with the map's own keys as "known values".
 function resolveRow<K extends string>(
   map: Map<K, CalendarRow>,
   key: K,

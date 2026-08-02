@@ -1,21 +1,38 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CalendarToolsDeps } from "../deps.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { CalendarToolsDeps } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
-import { ok, err } from "../utils.js";
-import { categorySchema, TimeWindowSchema } from "../utils/schemas.js";
-import { resolveCalendarName, allCalendarNames } from "../calendars.js";
-import { resolveTimeWindow } from "../utils/time.js";
-import { extractEventSummaries } from "../utils/mapping.js";
-import { formatWarnings } from "../utils/find.js";
-import type { EventSummary } from "../utils/mapping.js";
+import { ok, err } from "../utils";
+import { categorySchema, TimeWindowSchema } from "../utils/schemas";
+import { resolveCalendarName, allCalendarNames } from "../calendars";
+import { resolveTimeWindow } from "../utils/time";
+import { extractEventSummaries } from "../utils/mapping";
+import { formatWarnings } from "../utils/find";
+import type { EventSummary } from "../utils/mapping";
+import {
+  withBatchSupport,
+  runBatchTool,
+  type Resolved,
+} from "@dav-worker/batch-core";
 
-export function registerScheduleListTool(server: McpServer, deps: CalendarToolsDeps): void {
+function createItemShape(deps: CalendarToolsDeps) {
+  return {
+    time: TimeWindowSchema,
+    category: categorySchema(deps.config).optional(),
+  };
+}
+
+type ListItem = Resolved<ReturnType<typeof createItemShape>, never>;
+
+export function registerScheduleListTool(
+  server: McpServer,
+  deps: CalendarToolsDeps,
+): void {
+  const itemShape = createItemShape(deps);
+
   server.registerTool(
     "schedule_list",
     {
-      description:
-        "List calendar events in a time window. Omit `category` to " +
-        "search all configured calendars.",
+      description: "List calendar events in a time window.",
       annotations: {
         title: "List Events",
         readOnlyHint: true,
@@ -23,54 +40,70 @@ export function registerScheduleListTool(server: McpServer, deps: CalendarToolsD
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: { time: TimeWindowSchema, category: categorySchema(deps.config).optional() },
+      inputSchema: {
+        ...itemShape,
+        ...withBatchSupport(itemShape),
+      },
     },
-    async ({ time, category }) => {
-      try {
-        const { startUtc, endUtc } = resolveTimeWindow(time);
-        const client = deps.storage;
-        const calendarNames = category
-          ? [resolveCalendarName(deps.config, category)]
-          : allCalendarNames(deps.config);
-
-        const results: Array<EventSummary & { calendar: string }> = [];
-        const warnings: string[] = [];
-
-        for (const calendarName of calendarNames) {
-          let entries;
-          try {
-            entries = await client.listByTimeRange(calendarName, "VEVENT", startUtc, endUtc);
-          } catch (e) {
-            // A single misconfigured/missing calendar shouldn't take down
-            // an "all calendars" listing — same reasoning as
-            // findEventAcrossCalendars. Real errors still surface.
-            if (e instanceof WebDAVHttpError && e.status === 404) {
-              warnings.push(
-                `Calendar "${calendarName}" returned 404 (its slug in calendars.toml may be ` +
-                  `stale — check it against the calendar's actual URI on the server, e.g. ` +
-                  `after a rename). Skipped for this listing.`,
-              );
-              continue;
-            }
-            throw e;
-          }
-          for (const entry of entries) {
-            for (const summary of extractEventSummaries(entry)) {
-              results.push({ ...summary, calendar: calendarName });
-            }
-          }
-        }
-
-        if (results.length === 0) return ok(`${formatWarnings(warnings)}No events found in this window.`);
-
-        const lines = results.map((e) => {
-          const idPart = e.occurrence ? `id: ${e.uid}, occurrence: ${e.occurrence}` : `id: ${e.uid}`;
-          return `${e.start} – ${e.end}  ${e.title}  [${e.calendar}]  (${idPart})`;
-        });
-        return ok(`${formatWarnings(warnings)}${lines.join("\n")}`);
-      } catch (e) {
-        return err(e);
-      }
-    },
+    async (params) =>
+      runBatchTool(params, itemShape, err, (item: ListItem) =>
+        listEventItem(deps, item),
+      ),
   );
+}
+
+async function listEventItem(deps: CalendarToolsDeps, item: ListItem) {
+  const { time, category } = item;
+  try {
+    const { startUtc, endUtc } = resolveTimeWindow(time);
+    const client = deps.storage;
+    const calendarNames = category
+      ? [resolveCalendarName(deps.config, category)]
+      : allCalendarNames(deps.config);
+
+    const results: Array<EventSummary & { calendar: string }> = [];
+    const warnings: string[] = [];
+
+    for (const calendarName of calendarNames) {
+      let entries;
+      try {
+        entries = await client.listByTimeRange(
+          calendarName,
+          "VEVENT",
+          startUtc,
+          endUtc,
+        );
+      } catch (e) {
+        // A stale calendar slug shouldn't take down the rest of an
+        // "all calendars" listing.
+        if (e instanceof WebDAVHttpError && e.status === 404) {
+          warnings.push(
+            `Calendar "${calendarName}" returned 404 (its slug in calendars.toml may be ` +
+              `stale — check it against the calendar's actual URI on the server, e.g. ` +
+              `after a rename). Skipped for this listing.`,
+          );
+          continue;
+        }
+        throw e;
+      }
+      for (const entry of entries) {
+        for (const summary of extractEventSummaries(entry)) {
+          results.push({ ...summary, calendar: calendarName });
+        }
+      }
+    }
+
+    if (results.length === 0)
+      return ok(`${formatWarnings(warnings)}No events found in this window.`);
+
+    const lines = results.map((e) => {
+      const idPart = e.occurrence
+        ? `id: ${e.uid}, occurrence: ${e.occurrence}`
+        : `id: ${e.uid}`;
+      return `${e.start} – ${e.end}  ${e.title}  [${e.calendar}]  (${idPart})`;
+    });
+    return ok(`${formatWarnings(warnings)}${lines.join("\n")}`);
+  } catch (e) {
+    return err(e);
+  }
 }
