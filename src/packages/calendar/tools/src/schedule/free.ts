@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
 import { ok, err } from "../utils";
 import { z } from "zod";
-import { categorySchema, TimeWindowSchema } from "../utils/schemas";
+import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
 import {
   resolveTimeWindow,
@@ -63,7 +63,7 @@ function createItemShape(deps: CalendarToolsDeps) {
   return {
     duration: z.string().describe("Minimum slot length, e.g. '1h', '30m'."),
     between: TimeWindowSchema,
-    category: categorySchema(deps.config).optional(),
+    category: filterCategorySchema(deps.config).optional(),
   };
 }
 

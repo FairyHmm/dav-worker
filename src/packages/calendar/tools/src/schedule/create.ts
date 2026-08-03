@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
 import { ok, err } from "../utils";
 import {
-  categorySchema,
+  writeCategorySchema,
   TitleSchema,
   DescriptionSchema,
   LocationFieldSchema,
@@ -33,7 +33,7 @@ function createItemShape(deps: CalendarToolsDeps) {
     end: required(DateTimeSchema.optional()),
     // locked(): resolves to the calendar the event is physically written
     // into, so a batch shouldn't silently fan out across calendars.
-    category: locked(required(categorySchema(deps.config).optional())),
+    category: locked(required(writeCategorySchema(deps.config).optional())),
     description: DescriptionSchema,
     location: LocationFieldSchema,
     travel: TravelSchema,

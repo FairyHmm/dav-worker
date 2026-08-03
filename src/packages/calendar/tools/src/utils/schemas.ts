@@ -3,7 +3,18 @@ import { allCategories, type CalendarConfig } from "../calendars.js";
 
 // Built per-registration, not module-level: categories are per-session
 // (deps.config), not build-time-bundled.
-export function categorySchema(config: CalendarConfig) {
+//
+// Split into filter/write variants so a write path can't inherit
+// list/free's "omit means all calendars" semantics by accident.
+export function filterCategorySchema(config: CalendarConfig) {
+  return z
+    .string()
+    .describe(
+      `Calendar category. One of: ${allCategories(config).join(", ")}.`,
+    );
+}
+
+export function writeCategorySchema(config: CalendarConfig) {
   return z
     .string()
     .describe(

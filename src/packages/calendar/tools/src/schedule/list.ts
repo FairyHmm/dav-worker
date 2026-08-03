@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
 import { ok, err } from "../utils";
-import { categorySchema, TimeWindowSchema } from "../utils/schemas";
+import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
 import { resolveTimeWindow } from "../utils/time";
 import { extractEventSummaries } from "../utils/mapping";
@@ -17,7 +17,7 @@ import {
 function createItemShape(deps: CalendarToolsDeps) {
   return {
     time: TimeWindowSchema,
-    category: categorySchema(deps.config).optional(),
+    category: filterCategorySchema(deps.config).optional(),
   };
 }
 
