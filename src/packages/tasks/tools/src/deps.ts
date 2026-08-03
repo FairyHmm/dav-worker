@@ -1,21 +1,11 @@
 import type { TaskStorage } from "@dav-worker/task-contracts";
 
-// `list` is a free-form slug discovered via list_all, resolved directly
-// against storage — no TaskConfig/category map (SPEC-TASKS.md).
-//
-// resolveEventDue/resolveCategoryColor are the two sanctioned
-// cross-domain edges into calendar data (mirrors auth/upstream,
-// SPEC-MONOREPO.md A.7) — tasks/tools itself never imports calendar-*
-// code, app/worker wires these to the real calendar storage.
+// tasks/tools never imports calendar-* code (SPEC-MONOREPO.md A.7); these
+// two fields are its only edge into calendar data, wired by app/worker.
 export interface TaskToolsDeps {
   storage: TaskStorage;
-  // Returns the event's due-equivalent start as ISO, or null if gone.
   resolveEventDue: (eventId: string) => Promise<string | null>;
-  // Color is mandatory per calendars.csv row, so this only fails for an
-  // unknown category, never a known-category-no-color case.
   resolveCategoryColor: (category: string) => string;
-  // calendars.csv's category column, given separately so callers can
-  // validate `category` up front (see resolveKnownCategoryColor).
   categories: string[];
 }
 

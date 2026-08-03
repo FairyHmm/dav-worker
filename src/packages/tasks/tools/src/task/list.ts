@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
 import { ok, err } from "../utils";
+import { slugify } from "../utils/slugify";
 import {
   ListSchema,
   EventIdSchema,
@@ -67,8 +68,10 @@ export function registerTaskListTool(
 async function listTaskItem(deps: TaskToolsDeps, item: ListItem) {
   const { list, event_id, due, status, tags, sort } = item;
   try {
+    // listAll()'s slugs are already storage-real; a caller-given list
+    // isn't, so only that branch needs slugify().
     const listNames = list
-      ? [list]
+      ? [slugify(list)]
       : (await deps.storage.listAll()).map((l) => l.slug);
 
     const window = due ? resolveTimeWindow(due) : undefined;

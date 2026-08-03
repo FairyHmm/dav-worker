@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
 import { ok, err } from "../utils";
+import { slugify } from "../utils/slugify";
 import {
   TaskIdSchema,
   TaskTitleSchema,
@@ -76,7 +77,10 @@ export function registerTaskUpdateTool(
 }
 
 async function updateTaskItem(deps: TaskToolsDeps, item: UpdateItem) {
-  const { id, event_id, list } = item;
+  const { id, event_id } = item;
+  // Slugify before the "" check below, so a name that slugifies to ""
+  // (e.g. "!!!") still trips it.
+  const list = item.list !== undefined ? slugify(item.list) : undefined;
   // "" resolves to the base collection, not a 404 — must reject explicitly.
   if (list === "") {
     return err(new Error("A task list slug is required to move a task."));

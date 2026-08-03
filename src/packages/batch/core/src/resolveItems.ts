@@ -75,7 +75,10 @@ export function resolveItems<
 			}
 
 			if (tags.required && (out[key] === undefined || out[key] === "")) {
-				const where = isBatch ? ` (item ${i + 1})` : "";
+				// locked() fields are shared by definition, so every item is
+				// missing them together — attributing the failure to item N
+				// would blame one item for what's actually a batch-wide gap.
+				const where = isBatch && !tags.locked ? ` (item ${i + 1})` : "";
 				return { ok: false, error: `Field "${key}" is required${where}.` };
 			}
 		}

@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
 import { ok, err } from "../utils";
+import { slugify } from "../utils/slugify";
 import { TaskTitleSchema, ListSchema, EventIdSchema } from "../utils/schemas";
 import { buildTaskComponent, linkTaskToEvent } from "../utils/mapping";
 import { wrapInCalendar, stringifyCalendar } from "@dav-worker/calendar-ical";
@@ -59,7 +60,9 @@ export function registerTaskCreateTool(
 }
 
 async function createTaskItem(deps: TaskToolsDeps, item: CreateItem) {
-  const { title, list, event_id } = item;
+  const { title, event_id } = item;
+  // Un-slugified input would otherwise 404 against storage.
+  const list = slugify(item.list);
   try {
     const uid = crypto.randomUUID();
     const todo = buildTaskComponent(uid, { title });
