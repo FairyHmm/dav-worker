@@ -1,18 +1,36 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "../deps.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { FileToolsDeps } from "../deps";
 import { outline } from "@dav-worker/files-parser";
-import { ok, err, resolvePath } from "../utils/index.js";
-import { PathSchema, LocationSchema } from "../schemas.js";
+import { ok, err } from "../utils/response";
+import { resolvePath } from "../utils/path";
+import { PathSchema, LocationSchema } from "../utils/schemas";
+import {
+  withBatchSupport,
+  runBatchTool,
+  locked,
+  type Resolved,
+} from "@dav-worker/batch-core";
 
-export function registerOutlineTool(server: McpServer, deps: FileToolsDeps): void {
+function createItemShape() {
+  return {
+    path: PathSchema.optional(),
+    location: locked(LocationSchema),
+  };
+}
+
+type OutlineItem = Resolved<ReturnType<typeof createItemShape>, never>;
+
+export function registerOutlineTool(
+  server: McpServer,
+  deps: FileToolsDeps,
+): void {
+  const itemShape = createItemShape();
+
   server.registerTool(
     "file_outline",
     {
       description:
-        "Return the heading structure of a Markdown file as a nested tree " +
-        "(level, title, children) without body content. Useful for orienting " +
-        "in a large note before a targeted block read/write. `location` can " +
-        "name a shortcut base, with `path` as a relative addition onto it.",
+        "Return the heading structure of a Markdown file as a nested tree, without body content.",
       annotations: {
         title: "Get File Outline",
         readOnlyHint: true,
@@ -20,18 +38,25 @@ export function registerOutlineTool(server: McpServer, deps: FileToolsDeps): voi
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: { path: PathSchema.optional(), location: LocationSchema },
+      inputSchema: {
+        ...itemShape,
+        ...withBatchSupport(itemShape),
+      },
     },
-    async ({ path: pathArg, location }) => {
-      try {
-        const path = resolvePath(deps.config, { path: pathArg, location });
-        const client = deps.storage;
-        const { content } = await client.read(path);
-        const tree = outline(content);
-        return ok(JSON.stringify(tree, null, 2));
-      } catch (e) {
-        return err(e);
-      }
-    },
+    async (params) =>
+      runBatchTool(params, itemShape, err, (item: OutlineItem) =>
+        outlineFileItem(deps, item),
+      ),
   );
+}
+
+async function outlineFileItem(deps: FileToolsDeps, item: OutlineItem) {
+  const { path: pathArg, location } = item;
+  try {
+    const path = resolvePath(deps.config, { path: pathArg, location });
+    const { content } = await deps.storage.read(path);
+    return ok(JSON.stringify(outline(content), null, 2));
+  } catch (e) {
+    return err(e);
+  }
 }

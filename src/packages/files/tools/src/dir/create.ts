@@ -1,16 +1,36 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "../deps.js";
-import { ok, err, resolvePath } from "../utils/index.js";
-import { PathSchema, LocationSchema } from "../schemas.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { FileToolsDeps } from "../deps";
+import { ok, err } from "../utils/response";
+import { resolvePath } from "../utils/path";
+import { PathSchema, LocationSchema } from "../utils/schemas";
+import {
+  withBatchSupport,
+  runBatchTool,
+  locked,
+  type Resolved,
+} from "@dav-worker/batch-core";
 
-export function registerCreateFolderTool(server: McpServer, deps: FileToolsDeps): void {
+function createItemShape() {
+  return {
+    path: PathSchema.optional(),
+    // location locked(): shared base a batch's relative paths hang off of.
+    location: locked(LocationSchema),
+  };
+}
+
+type CreateItem = Resolved<ReturnType<typeof createItemShape>, never>;
+
+export function registerCreateFolderTool(
+  server: McpServer,
+  deps: FileToolsDeps,
+): void {
+  const itemShape = createItemShape();
+
   server.registerTool(
     "dir_create",
     {
       description:
-        "Create a directory. Succeeds silently if it already exists. " +
-        "`location` can name a shortcut base, with `path` as a relative " +
-        "addition onto it.",
+        "Create a directory. Succeeds silently if it already exists.",
       annotations: {
         title: "Create Directory",
         readOnlyHint: false,
@@ -18,19 +38,25 @@ export function registerCreateFolderTool(server: McpServer, deps: FileToolsDeps)
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: { path: PathSchema.optional(), location: LocationSchema },
+      inputSchema: {
+        ...itemShape,
+        ...withBatchSupport(itemShape),
+      },
     },
-    async ({ path: pathArg, location }) => {
-      try {
-        const path = resolvePath(deps.config, { path: pathArg, location });
-        const client = deps.storage;
-        const { alreadyExists } = await client.mkdir(path);
-        return ok(
-          alreadyExists ? `Already exists: ${path}` : `Created: ${path}`,
-        );
-      } catch (e) {
-        return err(e);
-      }
-    },
+    async (params) =>
+      runBatchTool(params, itemShape, err, (item: CreateItem) =>
+        createDirItem(deps, item),
+      ),
   );
+}
+
+async function createDirItem(deps: FileToolsDeps, item: CreateItem) {
+  const { path: pathArg, location } = item;
+  try {
+    const path = resolvePath(deps.config, { path: pathArg, location });
+    const { alreadyExists } = await deps.storage.mkdir(path);
+    return ok(alreadyExists ? `Already exists: ${path}` : `Created: ${path}`);
+  } catch (e) {
+    return err(e);
+  }
 }

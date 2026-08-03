@@ -1,15 +1,32 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { FileToolsDeps } from "../deps.js";
-import { ok, err, resolvePath } from "../utils/index.js";
-import { PathSchema, DepthSchema, LocationSchema } from "../schemas.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { FileToolsDeps } from "../deps";
+import { ok, err } from "../utils/response";
+import { resolvePath } from "../utils/path";
+import { PathSchema, DepthSchema, LocationSchema } from "../utils/schemas";
+import {
+  withBatchSupport,
+  runBatchTool,
+  locked,
+  type Resolved,
+} from "@dav-worker/batch-core";
+
+function createItemShape() {
+  return {
+    path: PathSchema.optional(),
+    location: locked(LocationSchema),
+    depth: DepthSchema,
+  };
+}
+
+type ListItem = Resolved<ReturnType<typeof createItemShape>, never>;
 
 export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
+  const itemShape = createItemShape();
+
   server.registerTool(
     "dir_list",
     {
-      description:
-        "List the contents of a directory. `location` can name a shortcut " +
-        "base, with `path` as a relative addition onto it.",
+      description: "List the contents of a directory.",
       annotations: {
         title: "List Directory",
         readOnlyHint: true,
@@ -18,30 +35,38 @@ export function registerListTool(server: McpServer, deps: FileToolsDeps): void {
         openWorldHint: true,
       },
       inputSchema: {
-        path: PathSchema.optional(),
-        location: LocationSchema,
-        depth: DepthSchema,
+        ...itemShape,
+        ...withBatchSupport(itemShape),
       },
     },
-    async ({ path: pathArg, location, depth }) => {
-      try {
-        const path = resolvePath(deps.config, { path: pathArg, location }, { allowRoot: true });
-        const client = deps.storage;
-        const entries = await client.list(path, depth);
-
-        if (entries.length === 0) return ok("Directory is empty.");
-
-        const lines = entries.map((e) => {
-          const kind = e.isDirectory ? "DIR " : "FILE";
-          const size = e.size != null ? ` (${e.size} bytes)` : "";
-          const label = depth === 1 ? e.name : e.path;
-          return `${kind}  ${label}${size}`;
-        });
-
-        return ok(lines.join("\n"));
-      } catch (e) {
-        return err(e);
-      }
-    },
+    async (params) =>
+      runBatchTool(params, itemShape, err, (item: ListItem) =>
+        listDirItem(deps, item),
+      ),
   );
+}
+
+async function listDirItem(deps: FileToolsDeps, item: ListItem) {
+  const { path: pathArg, location, depth } = item;
+  try {
+    // allowRoot: an omitted path/location here means "list the vault
+    // root," a documented and intended default for this tool only.
+    const path = resolvePath(
+      deps.config,
+      { path: pathArg, location },
+      { allowRoot: true },
+    );
+    const entries = await deps.storage.list(path, depth);
+    if (entries.length === 0) return ok("Directory is empty.");
+
+    const lines = entries.map((e) => {
+      const kind = e.isDirectory ? "DIR " : "FILE";
+      const size = e.size != null ? ` (${e.size} bytes)` : "";
+      const label = depth === 1 ? e.name : e.path;
+      return `${kind}  ${label}${size}`;
+    });
+    return ok(lines.join("\n"));
+  } catch (e) {
+    return err(e);
+  }
 }

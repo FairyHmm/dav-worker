@@ -1,11 +1,3 @@
-// Shared by file_write's whole-file target (see SPEC-PARSER.md's "Mode ×
-// target summary" for the full mode table across all targets). Reads the
-// existing file (a missing file is treated as empty, so this also covers
-// "append"/"prepend" to a file that doesn't exist yet), then combines it
-// with `content` per `mode`, adding a `\n` separator only where the two
-// pieces actually abut a non-empty existing file without one already.
-// `mode: "replace"` isn't handled here — the caller writes `content`
-// directly in that case, since there's no existing content to combine with.
 export async function combineWholeFile(
   client: { read(p: string): Promise<{ content: string }> },
   path: string,
@@ -17,6 +9,8 @@ export async function combineWholeFile(
   try {
     existing = (await client.read(path)).content;
   } catch {
+    // Missing file treated as empty — covers append/prepend to a file
+    // that doesn't exist yet.
     fileExists = false;
   }
   if (mode === "append") {

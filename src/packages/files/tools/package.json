@@ -6,6 +6,7 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "dependencies": {
+    "@dav-worker/batch-core": "workspace:*",
     "@dav-worker/files-contracts": "workspace:*",
     "@dav-worker/files-parser": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
