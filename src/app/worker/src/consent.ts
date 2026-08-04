@@ -5,7 +5,7 @@
 // Nothing is written to any store anywhere in this file.
 
 import { seal, open, verifyPkce, TokenError } from "./auth.js";
-import type { SessionProps } from "./index.js";
+import type { SessionProps } from "../index.js";
 
 interface AuthorizeParams {
   clientId: string;

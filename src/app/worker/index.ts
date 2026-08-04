@@ -1,5 +1,6 @@
-import { createMcpHandler } from "agents/mcp";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
 import { registerFileTools } from "@dav-worker/files-tools";
 import {
   registerCalendarTools,
@@ -23,8 +24,8 @@ import {
   createNextcloudCalDAVTaskStorage,
   WebDAVHttpError,
 } from "@dav-worker/storage-nextcloud";
-import { handleAuthorize, exchangeCode } from "./consent.js";
-import { seal, open, TokenError } from "./auth.js";
+import { handleAuthorize, exchangeCode } from "./src/consent";
+import { seal, open, TokenError } from "./src/auth";
 import defaultLocationsToml from "./fixtures/locations.toml";
 import defaultCalendarsCsv from "./fixtures/calendars.csv";
 
@@ -58,10 +59,18 @@ async function loadConfig(
 }
 
 async function createServer(props: SessionProps): Promise<McpServer> {
-  const server = new McpServer({
-    name: "dav-worker",
-    version: "0.1.0",
-  });
+  // AjvJsonSchemaValidator (the SDK's default) generates JS at runtime
+  // via `new Function`, which workerd disallows outside of eval-enabled
+  // contexts, and pulls in ~102KB of ajv/ajv-formats besides. The SDK's
+  // own docs recommend CfWorkerJsonSchemaValidator for edge runtimes for
+  // exactly this reason (see @modelcontextprotocol/sdk/validation).
+  const server = new McpServer(
+    {
+      name: "dav-worker",
+      version: "0.1.0",
+    },
+    { jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
+  );
 
   const fileStorage = createNextcloudWebDAVStorage(props.credential);
   const calendarStorage = createNextcloudCalDAVStorage(props.credential);
@@ -223,11 +232,7 @@ function protectedResourceMetadata(origin: string) {
   };
 }
 
-async function handleMcp(
-  request: Request,
-  env: Env,
-  ctx: ExecutionContext,
-): Promise<Response> {
+async function handleMcp(request: Request, env: Env): Promise<Response> {
   const authHeader = request.headers.get("authorization") ?? "";
   const match = /^Bearer (.+)$/i.exec(authHeader);
   if (!match) {
@@ -268,11 +273,15 @@ async function handleMcp(
     );
   }
 
-  return createMcpHandler(server)(
-    request,
-    env as unknown as globalThis.Env,
-    ctx,
-  );
+  // Fresh transport per request, stateless (no sessionIdGenerator): matches
+  // `server` above, which is also rebuilt per request from the sealed
+  // token — there's no in-memory or DO-backed session to resume across
+  // requests, so a stateful transport would just add unused machinery.
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+  });
+  await server.connect(transport);
+  return transport.handleRequest(request);
 }
 
 export default {
@@ -302,7 +311,7 @@ export default {
       return handleToken(request, env.TOKEN_KEY);
     }
     if (url.pathname === "/mcp") {
-      return handleMcp(request, env, ctx);
+      return handleMcp(request, env);
     }
     return new Response("Not found", { status: 404 });
   },

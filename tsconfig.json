@@ -16,5 +16,9 @@
     "skipLibCheck": true,
     "types": ["./src/app/worker/worker-configuration.d.ts", "node"],
   },
-  "include": ["src/app/worker/worker-configuration.d.ts", "src/**/*.ts"],
+  "include": [
+    "src/app/worker/worker-configuration.d.ts",
+    "src/**/*.ts",
+    "src/**/*.mts",
+  ],
 }

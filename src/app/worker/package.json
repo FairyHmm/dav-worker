@@ -4,14 +4,23 @@
   "private": true,
   "type": "module",
   "main": "./index.ts",
+  "scripts": {
+    "build": "tsx build.mts"
+  },
   "dependencies": {
-    "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
-    "@dav-worker/task-tools": "workspace:*",
+    "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
+    "@dav-worker/task-tools": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "agents": "^0.17.1"
+    "@cfworker/json-schema": "^4.1.1"
+  },
+  "devDependencies": {
+    "@dav-worker/worker-trim": "workspace:*",
+    "esbuild": "^0.28.1",
+    "source-map-explorer": "^2.5.3",
+    "tsx": "^4.23.1"
   }
 }
