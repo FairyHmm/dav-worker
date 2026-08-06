@@ -8,12 +8,12 @@
   "dependencies": {
     "@dav-worker/batch-core": "workspace:*",
     "@dav-worker/files-contracts": "workspace:*",
-    "@dav-worker/files-parser": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
+    "@dav-worker/files-parser": "workspace:*",
     "@dav-worker/files-types": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.30.0"
   }
 }

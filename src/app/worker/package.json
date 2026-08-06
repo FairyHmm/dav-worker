@@ -8,6 +8,7 @@
     "build": "tsx build.mts"
   },
   "dependencies": {
+    "@cfworker/json-schema": "^4.1.1",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/config-parser": "workspace:*",
@@ -15,13 +16,12 @@
     "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
     "@dav-worker/task-tools": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "@cfworker/json-schema": "^4.1.1"
+    "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {
     "@dav-worker/worker-trim": "workspace:*",
     "esbuild": "^0.28.1",
     "source-map-explorer": "^2.5.3",
-    "tsx": "^4.23.1"
+    "tsx": "^4.23.8"
   }
 }

@@ -14,9 +14,9 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^22.20.1",
+    "@types/node": "^26.1.2",
     "source-map-explorer": "^2.5.3",
-    "tsx": "^4.19.0",
-    "wrangler": "^4.110.0"
+    "tsx": "^4.23.8",
+    "wrangler": "^4.119.0"
   }
 }

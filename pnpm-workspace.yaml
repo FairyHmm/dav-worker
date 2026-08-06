@@ -11,3 +11,6 @@ allowBuilds:
   workerd: true
   sharp: true
   core-js-pure: true
+
+minimumReleaseAgeExclude:
+  - '@lucide/svelte@1.29.0'

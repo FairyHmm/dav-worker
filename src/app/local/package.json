@@ -8,17 +8,17 @@
     "start": "tsx index.ts"
   },
   "dependencies": {
-    "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
+    "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/config-parser": "workspace:*",
-    "@dav-worker/task-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@dav-worker/task-tools": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "tsx": "^4.19.0"
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.8"
   }
 }
