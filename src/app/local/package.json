@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./index.ts",
   "scripts": {
-    "start": "tsx index.ts"
+    "start": "node --env-file=.dev.vars --import tsx index.ts"
   },
   "dependencies": {
     "@dav-worker/calendar-ical": "workspace:*",

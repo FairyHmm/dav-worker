@@ -3,20 +3,23 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build:worker": "pnpm --dir src/app/worker run build",
-    "deploy": "pnpm build:worker && wrangler deploy -c src/app/worker/wrangler.jsonc",
-    "deploy:dry-run": "pnpm build:worker && wrangler deploy --dry-run --outdir src/app/worker/dist -c src/app/worker/wrangler.jsonc",
-    "analyze": "source-map-explorer src/app/worker/dist/**/*.js --no-border-checks",
-    "dev": "wrangler dev -c src/app/worker/wrangler.jsonc",
+    "build:worker": "pnpm -F @dav-worker/app-worker build",
+    "deploy": "pnpm -F @dav-worker/app-worker deploy",
+    "deploy:dry-run": "pnpm -F @dav-worker/app-worker deploy:dry-run",
+    "analyze": "pnpm -F @dav-worker/app-worker analyze",
+    "dev": "pnpm -F @dav-worker/app-worker dev",
+    "dev:local": "pnpm -F @dav-worker/app-local start",
+    "cf-typegen": "pnpm -F @dav-worker/app-worker cf-typegen",
     "format": "oxfmt --write .",
+    "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "cf-typegen": "wrangler types -c src/app/worker/wrangler.jsonc src/app/worker/worker-configuration.d.ts",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
     "source-map-explorer": "^2.5.3",
     "tsx": "^4.23.8",
+    "typescript": "^6.0.3",
     "wrangler": "^4.119.0"
   }
 }

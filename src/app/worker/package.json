@@ -5,7 +5,12 @@
   "type": "module",
   "main": "./index.ts",
   "scripts": {
-    "build": "tsx build.mts"
+    "build": "tsx build.mts",
+    "dev": "wrangler dev -c wrangler.jsonc",
+    "deploy": "pnpm run build && wrangler deploy -c wrangler.jsonc",
+    "deploy:dry-run": "pnpm run build && wrangler deploy --dry-run --outdir dist -c wrangler.jsonc",
+    "analyze": "source-map-explorer dist/**/*.js --no-border-checks",
+    "cf-typegen": "wrangler types -c wrangler.jsonc worker-configuration.d.ts"
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1",
@@ -22,6 +27,7 @@
     "@dav-worker/worker-trim": "workspace:*",
     "esbuild": "^0.28.1",
     "source-map-explorer": "^2.5.3",
-    "tsx": "^4.23.8"
+    "tsx": "^4.23.8",
+    "wrangler": "^4.119.0"
   }
 }
