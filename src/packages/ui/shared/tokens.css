@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/* Host tokens per SPEC-UI.md "Theming". Fallbacks keep this correct
+   with zero host support. */
+
+@theme inline {
+  /* Backgrounds */
+  --color-host-bg: var(--color-background-primary, Canvas);
+  --color-host-bg-secondary: var(--color-background-secondary, Canvas);
+  --color-host-bg-tertiary: var(
+    --color-background-tertiary,
+    color-mix(in srgb, CanvasText 6%, Canvas)
+  );
+  --color-host-bg-inverse: var(--color-background-inverse, CanvasText);
+  --color-host-bg-ghost: var(--color-background-ghost, transparent);
+
+  /* Text */
+  --color-host-text: var(--color-text-primary, CanvasText);
+  --color-host-text-secondary: var(
+    --color-text-secondary,
+    color-mix(in srgb, CanvasText 68%, Canvas)
+  );
+  --color-host-text-tertiary: var(
+    --color-text-tertiary,
+    color-mix(in srgb, CanvasText 48%, Canvas)
+  );
+  --color-host-text-disabled: var(
+    --color-text-disabled,
+    color-mix(in srgb, CanvasText 32%, Canvas)
+  );
+
+  /* Borders */
+  --color-host-border: var(
+    --color-border-primary,
+    color-mix(in srgb, CanvasText 16%, Canvas)
+  );
+  --color-host-border-secondary: var(
+    --color-border-secondary,
+    color-mix(in srgb, CanvasText 10%, Canvas)
+  );
+
+  /* Semantic states */
+  --color-host-danger-bg: var(--color-background-danger, #fee2e2);
+  --color-host-danger-text: var(--color-text-danger, #991b1b);
+  --color-host-danger-border: var(--color-border-danger, #fecaca);
+  --color-host-warning-bg: var(--color-background-warning, #fef3c7);
+  --color-host-warning-text: var(--color-text-warning, #92400e);
+  --color-host-success-bg: var(--color-background-success, #dcfce7);
+  --color-host-success-text: var(--color-text-success, #166534);
+  --color-host-info-bg: var(--color-background-info, #dbeafe);
+  --color-host-info-text: var(--color-text-info, #1e40af);
+
+  /* Ring stays separate from border so focus is visible either way. */
+  --color-host-ring: var(--color-ring-primary, Highlight);
+  --color-host-ring-danger: var(--color-ring-danger, #dc2626);
+
+  /* Typography */
+  --font-host: var(--font-sans, system-ui, sans-serif);
+  --font-host-mono: var(--font-mono, ui-monospace, "SF Mono", monospace);
+  --font-weight-host-normal: var(--font-weight-normal, 400);
+  --font-weight-host-medium: var(--font-weight-medium, 500);
+  --font-weight-host-semibold: var(--font-weight-semibold, 600);
+
+  --text-host-xs: var(--text-xs, 0.75rem);
+  --text-host-sm: var(--text-sm, 0.875rem);
+  --text-host-md: var(--text-md, 1rem);
+  --text-host-lg: var(--text-lg, 1.125rem);
+
+  /* Radius / shadow */
+  --radius-host-xs: var(--border-radius-xs, 4px);
+  --radius-host-sm: var(--border-radius-sm, 6px);
+  --radius-host-md: var(--border-radius-md, 8px);
+  --radius-host-lg: var(--border-radius-lg, 12px);
+  --radius-host-full: var(--border-radius-full, 9999px);
+
+  --shadow-host-sm: var(--shadow-sm, none);
+  --shadow-host-md: var(--shadow-md, none);
+
+  /* Ours, not a host token — commit-on-release settle time. */
+  --duration-fast: 100ms;
+  --duration-settle: 160ms;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--color-host-bg);
+  color: var(--color-host-text);
+  font-family: var(--font-host);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+}
+
+/* Host ring color/width so focus meets each host's own contrast. */
+:focus-visible {
+  outline: var(--border-width-regular, 2px) solid var(--color-host-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
