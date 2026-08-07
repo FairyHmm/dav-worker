@@ -77,7 +77,7 @@ async function handleConsentSubmit(
   const username = String(form.get("username") ?? "").trim();
   const password = String(form.get("password") ?? "");
   const configPath =
-    String(form.get("configPath") ?? "").trim() || "/.config/dav-worker.toml";
+    String(form.get("configPath") ?? "").trim() || "/.config/dav-worker.conf";
 
   // Re-validated here too: the client_id/redirect_uri came back from the
   // browser via hidden fields, so treat them as untrusted input again.
@@ -132,6 +132,7 @@ function renderConsentForm(
     input { width: 100%; box-sizing: border-box; padding: 0.5rem; margin-top: 0.25rem; }
     button { margin-top: 1.5rem; padding: 0.6rem 1.2rem; }
     p.hint { font-size: 0.8rem; color: #555; }
+    code { font-size: 0.85em; background: #f2f2f2; padding: 0.1rem 0.3rem; border-radius: 3px; }
   </style>
 </head>
 <body>
@@ -156,8 +157,11 @@ function renderConsentForm(
     <p class="hint">App passwords are recommended over your main account password.</p>
 
     <label>Config path
-      <input type="text" name="configPath" placeholder="/.config/dav-worker.toml" />
+      <input type="text" name="configPath" placeholder="/.config/dav-worker.conf" />
     </label>
+    <p class="hint">Created automatically if missing. The file is TOML-formatted, but a
+      <code>.conf</code> extension is recommended since Nextcloud won't open <code>.toml</code>
+      files natively in its web UI.</p>
 
     <button type="submit">Connect</button>
   </form>

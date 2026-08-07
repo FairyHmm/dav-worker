@@ -40,17 +40,34 @@ interface Env {
   TOKEN_KEY: string;
 }
 
+// Parent-dir 404s (e.g. /.config not existing yet) are routine on a fresh
+// account — mkdir treats "already exists" as a non-error itself.
+async function ensureParentDir(
+  path: string,
+  fileStorage: { mkdir(path: string): Promise<unknown> },
+): Promise<void> {
+  const dir = path.slice(0, path.lastIndexOf("/"));
+  if (dir) await fileStorage.mkdir(dir);
+}
+
 async function loadConfig(
   path: string,
-  fileStorage: { read(path: string): Promise<{ content: string }> },
+  fileStorage: {
+    read(path: string): Promise<{ content: string }>;
+    write(path: string, content: string): Promise<unknown>;
+    mkdir(path: string): Promise<unknown>;
+  },
 ): Promise<string> {
   try {
     return (await fileStorage.read(path)).content;
   } catch (err) {
-    // File is optional — empty doc is the bootstrap state until config_set writes it.
-    if (err instanceof WebDAVHttpError && err.status === 404) return "";
-    throw err;
+    if (!(err instanceof WebDAVHttpError && err.status === 404)) throw err;
   }
+  // Write the bootstrap default back so config_get/direct edits see a real
+  // file on first connect, not just an implied empty state.
+  await ensureParentDir(path, fileStorage);
+  await fileStorage.write(path, "");
+  return "";
 }
 
 async function createServer(props: SessionProps): Promise<McpServer> {

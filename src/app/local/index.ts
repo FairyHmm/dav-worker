@@ -24,6 +24,7 @@ import {
   createNextcloudWebDAVStorage,
   createNextcloudCalDAVStorage,
   createNextcloudCalDAVTaskStorage,
+  WebDAVHttpError,
 } from "@dav-worker/storage-nextcloud";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -42,18 +43,37 @@ function requireEnv(name: string): string {
   return value;
 }
 
+// Parent-dir 404s (e.g. /.config not existing yet) are routine on a fresh
+// account — mkdir treats "already exists" as a non-error itself.
+async function ensureParentDir(
+  path: string,
+  fileStorage: { mkdir(path: string): Promise<unknown> },
+): Promise<void> {
+  const dir = path.slice(0, path.lastIndexOf("/"));
+  if (dir) await fileStorage.mkdir(dir);
+}
+
 // Falls back to the bundled fixture if no path is given, so this is
 // runnable before real config files exist on Nextcloud.
 async function loadConfig(
   envVar: string,
   fixtureName: string,
-  fileStorage: { read(path: string): Promise<{ content: string }> },
+  fileStorage: {
+    read(path: string): Promise<{ content: string }>;
+    write(path: string, content: string): Promise<unknown>;
+    mkdir(path: string): Promise<unknown>;
+  },
 ): Promise<string> {
   const path = process.env[envVar];
-  if (path) {
+  if (!path) return readFile(join(moduleDir, "fixtures", fixtureName), "utf-8");
+  try {
     return (await fileStorage.read(path)).content;
+  } catch (err) {
+    if (!(err instanceof WebDAVHttpError && err.status === 404)) throw err;
   }
-  return readFile(join(moduleDir, "fixtures", fixtureName), "utf-8");
+  await ensureParentDir(path, fileStorage);
+  await fileStorage.write(path, "");
+  return "";
 }
 
 async function main(): Promise<void> {
