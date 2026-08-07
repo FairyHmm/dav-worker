@@ -5,7 +5,6 @@ NEXTCLOUD_HOST=https://cloud.example.com
 NEXTCLOUD_USERNAME=
 NEXTCLOUD_PASSWORD=
 
-# Optional. If unset, falls back to the bundled fixtures/*.toml — handy
-# before you've put real config files on your Nextcloud yet.
-# LOCATIONS_CONFIG_PATH=/locations.toml
-# CALENDARS_CONFIG_PATH=/calendars.toml
+# Optional. If unset, falls back to the bundled fixtures/config.toml —
+# handy before you've put a real config file on your Nextcloud yet.
+# CONFIG_PATH=/config.toml

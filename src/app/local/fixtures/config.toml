@@ -1,0 +1,20 @@
+# Deliberately smaller than SPEC-CONFIG.md's reference so this fixture
+# never silently drifts if the real shape changes.
+
+[preferences]
+
+[locations]
+[locations.aliases]
+vault = "/Obsidian"
+projects = "@vault/Projects"
+
+[locations.hosts]
+"@projects/OSS" = ["dav-worker"]
+
+[locations.patterns]
+"*/spec" = "*/Docs/SPEC.md"
+"*/code" = "*/Code"
+
+[calendars]
+work = ["work", "#3B82F6"]
+personal = ["personal", "#22C55E"]

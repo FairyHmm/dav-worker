@@ -1,27 +1,19 @@
-// Local dev composition root. Deliberately independent of app/worker: per
-// SPEC-MONOREPO.md step 10, no Layer-1/Layer-2 branching lives inside the
-// worker's fetch handler — this file is its own place to wire things up.
-//
-// There's no OAuth round-trip and no fixture "TokenStore" (that concept
-// predates the stateless-auth rewrite — see Docs/SPEC-STATELESS-AUTH.md).
-// Instead this reads a Nextcloud credential + config paths straight out of
-// local env vars and registers tools for a stdio MCP transport, so a local
-// client (Claude Desktop, `mcp-inspector`, etc.) can point straight at this
-// process without any consent screen or token exchange.
+// Local dev composition root, independent of app/worker (SPEC-MONOREPO.md
+// step 10). No OAuth round-trip — reads credential + config path from env
+// vars and serves stdio directly, no consent screen or token exchange.
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
 import {
   registerCalendarTools,
-  parseCalendarConfig,
   resolveCategoryColor,
   allCategories,
   findEventAcrossCalendars,
   findMasterEvent,
 } from "@dav-worker/calendar-tools";
 import { registerTaskTools } from "@dav-worker/task-tools";
-import { parseFilesConfig } from "@dav-worker/files-locations";
+import { parseAppConfig } from "@dav-worker/config-parser";
 import {
   parseCalendar,
   findAllComponents,
@@ -50,10 +42,8 @@ function requireEnv(name: string): string {
   return value;
 }
 
-// If no config path is given, fall back to the bundled fixture in
-// fixtures/ (read straight off local disk) instead of hitting Nextcloud at
-// all — lets someone try this out before they've put real config files on
-// their Nextcloud yet.
+// Falls back to the bundled fixture if no path is given, so this is
+// runnable before real config files exist on Nextcloud.
 async function loadConfig(
   envVar: string,
   fixtureName: string,
@@ -76,15 +66,15 @@ async function main(): Promise<void> {
   const calendarStorage = createNextcloudCalDAVStorage(credential);
   const taskStorage = createNextcloudCalDAVTaskStorage(credential);
 
-  const [locationsContent, calendarsContent] = await Promise.all([
-    loadConfig("LOCATIONS_CONFIG_PATH", "locations.toml", fileStorage),
-    loadConfig("CALENDARS_CONFIG_PATH", "calendars.csv", fileStorage),
-  ]);
-  const filesConfig = parseFilesConfig(locationsContent);
-  const calendarConfig = parseCalendarConfig(calendarsContent);
+  const configContent = await loadConfig(
+    "CONFIG_PATH",
+    "config.toml",
+    fileStorage,
+  );
+  const { locations: filesConfig, calendars: calendarConfig } =
+    parseAppConfig(configContent);
 
-  // Mirrors app/worker/index.ts's resolveEventDue exactly — see that
-  // file's comment for the full rationale (SPEC-MONOREPO.md A.7).
+  // Mirrors app/worker/index.ts's resolveEventDue (SPEC-MONOREPO.md A.7).
   const resolveEventDue = async (eventId: string): Promise<string | null> => {
     const { found } = await findEventAcrossCalendars(
       calendarStorage,
@@ -102,9 +92,7 @@ async function main(): Promise<void> {
     return basicToIso(dt.raw);
   };
 
-  // Mirrors app/worker/index.ts's resolveCategoryColor wiring exactly —
-  // same rationale (deps.ts), just a pure config lookup, no Nextcloud
-  // round-trip.
+  // Mirrors app/worker/index.ts's resolveCategoryColor wiring.
   const resolveCategoryColorFn = (category: string): string =>
     resolveCategoryColor(calendarConfig, category);
 

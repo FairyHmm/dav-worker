@@ -7,8 +7,8 @@ import { registerScheduleDeleteTool } from "./src/schedule/delete";
 import { registerScheduleFreeTool } from "./src/schedule/free";
 
 export type { CalendarToolsDeps } from "./src/deps";
-// Exposed so app/worker (and app/local) can parse the session's
-// calendars.csv and hand the result into CalendarToolsDeps.config.
+// Exposed so config/parser can parse the merged config.toml's [calendars]
+// table and hand the result into CalendarToolsDeps.config.
 export {
   parseCalendarConfig,
   resolveCalendarName,
@@ -18,6 +18,7 @@ export {
   allCategories,
   type CalendarConfig,
   type CalendarRow,
+  type RawCalendarTable,
 } from "./src/calendars";
 // Exported for app/worker's resolveEventDue (tasks/tools' one sanctioned
 // cross-domain edge, SPEC-MONOREPO.md A.7) — reuses the same cross-calendar
@@ -28,9 +29,6 @@ export { findEventAcrossCalendars, formatWarnings } from "./src/utils/find";
 // DTSTART specifically, not whichever VEVENT parses first.
 export { findMasterEvent } from "./src/utils/mapping";
 
-// Public entry point (SPEC-MONOREPO.md A.5): takes only CalendarToolsDeps,
-// never a platform type like Env, so app/worker and app/local can both
-// call this unchanged.
 export function registerCalendarTools(
   server: McpServer,
   deps: CalendarToolsDeps,

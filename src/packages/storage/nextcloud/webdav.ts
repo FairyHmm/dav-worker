@@ -18,7 +18,9 @@ import {
 import { checkReadable } from "@dav-worker/files-types";
 import { asNextcloudCredential, basicAuthHeader } from "./credential.js";
 
-export function createNextcloudWebDAVStorage(credential: Credential): FileStorage {
+export function createNextcloudWebDAVStorage(
+  credential: Credential,
+): FileStorage {
   const cred = asNextcloudCredential(credential);
   const transport = createWebDAVTransport(cred.host, basicAuthHeader(cred));
   const basePath = `/remote.php/dav/files/${cred.username}`;
@@ -35,7 +37,9 @@ export function createNextcloudWebDAVStorage(credential: Credential): FileStorag
     if (fallbackPath === undefined) {
       const baseIdx = decodedHref.indexOf(basePath);
       if (baseIdx !== -1) {
-        relPath = decodedHref.slice(baseIdx + basePath.length).replace(/^\/+/, "");
+        relPath = decodedHref
+          .slice(baseIdx + basePath.length)
+          .replace(/^\/+/, "");
       }
     }
 
@@ -68,12 +72,16 @@ export function createNextcloudWebDAVStorage(credential: Credential): FileStorag
     },
 
     async read(p) {
-      const res = await transport.request("GET", path(p), { expectStatus: [200, 404] });
-      if (res.status === 404) throw new Error(`File not found: ${p}`);
+      const res = await transport.request("GET", path(p));
 
-      const { readable, contentType } = checkReadable(p, res.headers.get("content-type"));
+      const { readable, contentType } = checkReadable(
+        p,
+        res.headers.get("content-type"),
+      );
       if (!readable) {
-        throw new Error(`Binary files cannot be read as text (Content-Type: ${contentType}).`);
+        throw new Error(
+          `Binary files cannot be read as text (Content-Type: ${contentType}).`,
+        );
       }
       return { content: await res.text(), contentType };
     },
@@ -87,7 +95,9 @@ export function createNextcloudWebDAVStorage(credential: Credential): FileStorag
     },
 
     async delete(p) {
-      await transport.request("DELETE", path(p), { expectStatus: [200, 204, 404] });
+      await transport.request("DELETE", path(p), {
+        expectStatus: [200, 204, 404],
+      });
     },
 
     async stat(p) {
@@ -126,7 +136,9 @@ export function createNextcloudWebDAVStorage(credential: Credential): FileStorag
     },
 
     async mkdir(p) {
-      const res = await transport.request("MKCOL", path(p), { expectStatus: [201, 405] });
+      const res = await transport.request("MKCOL", path(p), {
+        expectStatus: [201, 405],
+      });
       if (res.status === 405) return { created: false, alreadyExists: true };
       return { created: true, alreadyExists: false };
     },

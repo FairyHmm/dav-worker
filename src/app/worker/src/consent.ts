@@ -1,11 +1,9 @@
-// Consent screen + authorization-code issuance. No `workers-oauth-provider`,
-// no grant store: `client_id` is itself a sealed token (see auth.ts) proving
-// which redirect_uris were registered, and the code this hands back is a
-// sealed, short-lived blob of the Nextcloud credential + PKCE challenge.
-// Nothing is written to any store anywhere in this file.
+// Consent screen + code issuance. No grant store: client_id is itself a
+// sealed token (auth.ts), and the code handed back is a sealed, short-lived
+// blob of the credential + PKCE challenge — nothing persisted server-side.
 
-import { seal, open, verifyPkce, TokenError } from "./auth.js";
-import type { SessionProps } from "../index.js";
+import { seal, open, verifyPkce, TokenError } from "./auth";
+import type { SessionProps } from "../index";
 
 interface AuthorizeParams {
   clientId: string;
@@ -28,7 +26,10 @@ interface CodePayload {
 
 const CODE_TTL_SECONDS = 120;
 
-export async function handleAuthorize(request: Request, secret: string): Promise<Response> {
+export async function handleAuthorize(
+  request: Request,
+  secret: string,
+): Promise<Response> {
   const url = new URL(request.url);
 
   if (request.method === "POST") {
@@ -51,7 +52,9 @@ export async function handleAuthorize(request: Request, secret: string): Promise
     return new Response(`Invalid client: ${msg}`, { status: 400 });
   }
   if (!registration.redirect_uris.includes(params.redirectUri)) {
-    return new Response("redirect_uri does not match registered client", { status: 400 });
+    return new Response("redirect_uri does not match registered client", {
+      status: 400,
+    });
   }
 
   return new Response(renderConsentForm(params, registration), {
@@ -59,7 +62,10 @@ export async function handleAuthorize(request: Request, secret: string): Promise
   });
 }
 
-async function handleConsentSubmit(request: Request, secret: string): Promise<Response> {
+async function handleConsentSubmit(
+  request: Request,
+  secret: string,
+): Promise<Response> {
   const form = await request.formData();
 
   const clientId = String(form.get("clientId") ?? "");
@@ -70,8 +76,8 @@ async function handleConsentSubmit(request: Request, secret: string): Promise<Re
   const host = String(form.get("host") ?? "").trim();
   const username = String(form.get("username") ?? "").trim();
   const password = String(form.get("password") ?? "");
-  const locations = String(form.get("locationsConfigPath") ?? "").trim();
-  const calendars = String(form.get("calendarsConfigPath") ?? "").trim();
+  const configPath =
+    String(form.get("configPath") ?? "").trim() || "/.config/dav-worker.toml";
 
   // Re-validated here too: the client_id/redirect_uri came back from the
   // browser via hidden fields, so treat them as untrusted input again.
@@ -82,12 +88,14 @@ async function handleConsentSubmit(request: Request, secret: string): Promise<Re
     return new Response("Invalid client", { status: 400 });
   }
   if (!registration.redirect_uris.includes(redirectUri)) {
-    return new Response("redirect_uri does not match registered client", { status: 400 });
+    return new Response("redirect_uri does not match registered client", {
+      status: 400,
+    });
   }
 
   const props: SessionProps = {
     credential: { host, username, password },
-    configs: { locations, calendars },
+    configs: { path: configPath },
   };
   const payload: CodePayload = { props, codeChallenge, redirectUri };
   const code = await seal(secret, payload, CODE_TTL_SECONDS);
@@ -106,7 +114,10 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderConsentForm(params: AuthorizeParams, registration: ClientRegistration): string {
+function renderConsentForm(
+  params: AuthorizeParams,
+  registration: ClientRegistration,
+): string {
   const clientName = registration.client_name ?? params.clientId;
 
   return `<!doctype html>
@@ -144,11 +155,8 @@ function renderConsentForm(params: AuthorizeParams, registration: ClientRegistra
     </label>
     <p class="hint">App passwords are recommended over your main account password.</p>
 
-    <label>Locations config path
-      <input type="text" name="locationsConfigPath" placeholder="/locations.toml" />
-    </label>
-    <label>Calendars config path
-      <input type="text" name="calendarsConfigPath" placeholder="/calendars.csv" />
+    <label>Config path
+      <input type="text" name="configPath" placeholder="/.config/dav-worker.toml" />
     </label>
 
     <button type="submit">Connect</button>

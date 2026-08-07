@@ -1,0 +1,13 @@
+{
+  "name": "@dav-worker/config-parser",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "@dav-worker/calendar-tools": "workspace:*",
+    "@dav-worker/files-locations": "workspace:*",
+    "smol-toml": "^1.7.0"
+  }
+}

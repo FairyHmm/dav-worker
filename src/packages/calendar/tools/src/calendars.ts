@@ -1,6 +1,5 @@
-// One row per calendar: category is the interface tool calls use, slug is
-// the CalDAV calendar name, color is the task-list anchor for task tools.
-// All three required and mutually unique.
+// category is the interface tool calls use; slug is the CalDAV calendar
+// name; color anchors task-list lookups. All three unique.
 export interface CalendarRow {
   category: string;
   slug: string;
@@ -13,71 +12,55 @@ export interface CalendarConfig {
   byColor: Map<string, CalendarRow>;
 }
 
-const EXPECTED_HEADER = ["category", "slug", "color"];
-
-// Written verbatim into ic:calendar-color with no server-side validation,
-// so a malformed value would otherwise persist silently and only surface
-// later as a color filter that never matches. #RGB/#RRGGBB is all
-// Nextcloud's own color picker emits.
+// Written verbatim to ic:calendar-color with no server-side validation;
+// #RGB/#RRGGBB is all Nextcloud's own color picker emits.
 const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-// Hand-rolled: no quoted/escaped fields to worry about, so a real CSV
-// parser buys nothing here.
-function parseRows(raw: string): CalendarRow[] {
-  const lines = raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"));
+// [calendars] table shape (SPEC-CONFIG.md): category = [slug, color].
+export type RawCalendarTable = Record<string, [string, string]>;
 
-  if (lines.length === 0) {
-    throw new Error(
-      "calendars.csv is empty (expected a header row plus at least one calendar).",
-    );
-  }
+// Already TOML-parsed by the caller (config/parser) — no CSV parsing
+// here anymore, per SPEC-CONFIG.md's single config.toml model.
+function parseRows(raw: RawCalendarTable): CalendarRow[] {
+  const categories = Object.keys(raw);
 
-  const header = lines[0]!.split(",").map((cell) => cell.trim());
-  if (
-    header.length !== EXPECTED_HEADER.length ||
-    EXPECTED_HEADER.some((col, i) => header[i] !== col)
-  ) {
-    throw new Error(
-      `calendars.csv header must be exactly "${EXPECTED_HEADER.join(",")}", got "${header.join(",")}".`,
-    );
-  }
-
-  return lines.slice(1).map((line, i) => {
-    const cells = line.split(",").map((cell) => cell.trim());
-    if (cells.length !== EXPECTED_HEADER.length) {
+  return categories.map((category) => {
+    const entry = raw[category];
+    if (!Array.isArray(entry) || entry.length !== 2) {
       throw new Error(
-        `calendars.csv row ${i + 2} has ${cells.length} fields, expected ${EXPECTED_HEADER.length}: "${line}"`,
+        `[calendars] entry "${category}" must be a [slug, color] pair, got ${JSON.stringify(entry)}.`,
       );
     }
-    const [category, slug, color] = cells as [string, string, string];
-    if (!category || !slug || !color) {
+    const [slug, color] = entry;
+    if (
+      typeof slug !== "string" ||
+      typeof color !== "string" ||
+      !slug ||
+      !color
+    ) {
       throw new Error(
-        `calendars.csv row ${i + 2} has an empty field (all of category, slug, color are required): "${line}"`,
+        `[calendars] entry "${category}" has an empty field (both slug and color are required): [${slug}, ${color}]`,
       );
     }
     if (!HEX_COLOR_RE.test(color)) {
       throw new Error(
-        `calendars.csv row ${i + 2} has an invalid color "${color}" — expected a hex string ` +
+        `[calendars] entry "${category}" has an invalid color "${color}" — expected a hex string ` +
           `like "#3B82F6" or "#3BF" (this value gets written directly to Nextcloud's ` +
-          `calendar-color property): "${line}"`,
+          `calendar-color property).`,
       );
     }
     return { category, slug, color };
   });
 }
 
-export function parseCalendarConfig(raw: string): CalendarConfig {
+export function parseCalendarConfig(raw: RawCalendarTable): CalendarConfig {
   const rows = parseRows(raw);
 
   const byCategory = new Map<string, CalendarRow>();
   const bySlug = new Map<string, CalendarRow>();
   const byColor = new Map<string, CalendarRow>();
 
-  // One column-uniqueness guard, closed over the maps under construction
-  // (building, not the read-side resolveRow below).
+  // Column-uniqueness guard, closed over the maps under construction.
   const claim = (
     map: Map<string, CalendarRow>,
     key: string,
@@ -85,7 +68,7 @@ export function parseCalendarConfig(raw: string): CalendarConfig {
     row: CalendarRow,
   ) => {
     if (map.has(key))
-      throw new Error(`calendars.csv has a duplicate ${what}: "${key}".`);
+      throw new Error(`[calendars] has a duplicate ${what}: "${key}".`);
     map.set(key, row);
   };
 

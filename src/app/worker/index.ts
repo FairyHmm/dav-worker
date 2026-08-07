@@ -4,14 +4,13 @@ import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validatio
 import { registerFileTools } from "@dav-worker/files-tools";
 import {
   registerCalendarTools,
-  parseCalendarConfig,
   resolveCategoryColor,
   allCategories,
   findEventAcrossCalendars,
   findMasterEvent,
 } from "@dav-worker/calendar-tools";
 import { registerTaskTools } from "@dav-worker/task-tools";
-import { parseFilesConfig } from "@dav-worker/files-locations";
+import { parseAppConfig } from "@dav-worker/config-parser";
 import {
   parseCalendar,
   findAllComponents,
@@ -26,18 +25,14 @@ import {
 } from "@dav-worker/storage-nextcloud";
 import { handleAuthorize, exchangeCode } from "./src/consent";
 import { seal, open, TokenError } from "./src/auth";
-import defaultLocationsToml from "./fixtures/locations.toml";
-import defaultCalendarsCsv from "./fixtures/calendars.csv";
 
-// No `workers-oauth-provider`, no OAUTH_KV, no grant store of any kind:
-// every token in this file is self-contained (see auth.ts). SessionProps
-// is exactly what used to live in a grant's `props` — now it only ever
-// exists encrypted inside a token the client holds, never server-side.
+// No grant store — every token is self-contained (see auth.ts), living
+// only encrypted in the client's hands, never server-side.
 export interface SessionProps {
   credential: { host: string; username: string; password: string };
+  // Single path to the merged config.toml (SPEC-CONFIG.md).
   configs: {
-    locations: string;
-    calendars: string;
+    path: string;
   };
 }
 
@@ -45,25 +40,21 @@ interface Env {
   TOKEN_KEY: string;
 }
 
-// Blank config path from the consent screen falls back to the bundled
-// fixture (mirrors app/local's fixture fallback) instead of hitting
-// Nextcloud with an empty path. Temporary — goes away once arbitrary
-// per-user config paths are the only supported mode (Fairy's call).
 async function loadConfig(
   path: string,
-  defaultToml: string,
   fileStorage: { read(path: string): Promise<{ content: string }> },
 ): Promise<string> {
-  if (!path) return defaultToml;
-  return (await fileStorage.read(path)).content;
+  try {
+    return (await fileStorage.read(path)).content;
+  } catch (err) {
+    // File is optional — empty doc is the bootstrap state until config_set writes it.
+    if (err instanceof WebDAVHttpError && err.status === 404) return "";
+    throw err;
+  }
 }
 
 async function createServer(props: SessionProps): Promise<McpServer> {
-  // AjvJsonSchemaValidator (the SDK's default) generates JS at runtime
-  // via `new Function`, which workerd disallows outside of eval-enabled
-  // contexts, and pulls in ~102KB of ajv/ajv-formats besides. The SDK's
-  // own docs recommend CfWorkerJsonSchemaValidator for edge runtimes for
-  // exactly this reason (see @modelcontextprotocol/sdk/validation).
+  // Ajv (SDK default) uses `new Function` at runtime, which workerd disallows.
   const server = new McpServer(
     {
       name: "dav-worker",
@@ -76,26 +67,14 @@ async function createServer(props: SessionProps): Promise<McpServer> {
   const calendarStorage = createNextcloudCalDAVStorage(props.credential);
   const taskStorage = createNextcloudCalDAVTaskStorage(props.credential);
 
-  const [locationsContent, calendarsContent] = await Promise.all([
-    loadConfig(props.configs.locations, defaultLocationsToml, fileStorage),
-    loadConfig(props.configs.calendars, defaultCalendarsCsv, fileStorage),
-  ]);
-  const filesConfig = parseFilesConfig(locationsContent);
-  const calendarConfig = parseCalendarConfig(calendarsContent);
+  const configContent = await loadConfig(props.configs.path, fileStorage);
+  const { locations: filesConfig, calendars: calendarConfig } =
+    parseAppConfig(configContent);
 
-  // resolveEventDue is the one sanctioned cross-domain edge into calendar
-  // data (SPEC-MONOREPO.md A.7, tasks/tools/src/deps.ts): task_create/
-  // task_update ask "what's this event's due-equivalent start?" given only
-  // an event UID (no calendar name), so this must search across all
-  // configured calendars, then pull DTSTART out of the matched VEVENT.
-  // Reuses calendar/tools' findEventAcrossCalendars/findMasterEvent
-  // (exported publicly for exactly this) rather than duplicating the
-  // cross-calendar UID search or splitting it into its own package —
-  // app/worker is the sole wiring point and is allowed to depend on
-  // calendar/tools directly. findMasterEvent matters because a resolved
-  // event's calendar-data can hold a recurring master plus detached
-  // RECURRENCE-ID overrides as sibling VEVENTs — DTSTART must come from
-  // the master, not whichever VEVENT parses first.
+  // Sole sanctioned cross-domain edge into calendar data (SPEC-MONOREPO.md
+  // A.7): tasks only have a UID, so this searches all calendars for it.
+  // findMasterEvent matters since detached RECURRENCE-ID overrides can
+  // sit alongside the master VEVENT — DTSTART must come from the master.
   const resolveEventDue = async (eventId: string): Promise<string | null> => {
     const { found } = await findEventAcrossCalendars(
       calendarStorage,
@@ -113,9 +92,7 @@ async function createServer(props: SessionProps): Promise<McpServer> {
     return basicToIso(dt.raw);
   };
 
-  // resolveCategoryColor mirrors resolveEventDue's edge exactly — same
-  // rationale, same wiring point, just a pure config lookup instead of a
-  // Nextcloud round-trip.
+  // Same edge as resolveEventDue, but a pure config lookup, no round-trip.
   const resolveCategoryColorFn = (category: string): string =>
     resolveCategoryColor(calendarConfig, category);
 
@@ -141,10 +118,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-// Dynamic Client Registration (RFC 7591), stateless: the returned
-// `client_id` *is* the registration, sealed under TOKEN_KEY. There is
-// nothing to look up later — /authorize just re-opens the client_id to
-// recover the redirect_uris it was issued for.
+// RFC 7591, stateless: client_id itself is the sealed registration.
 async function handleRegister(
   request: Request,
   secret: string,
@@ -198,9 +172,7 @@ async function handleToken(
     );
   }
 
-  // No ttlSeconds: access tokens are long-lived by design (see
-  // Docs/SPEC-STATELESS-AUTH.md Token lifetime — Nextcloud app-password
-  // revocation is the real kill switch, not a worker-side TTL).
+  // No ttlSeconds — Nextcloud app-password revocation is the real kill switch.
   const access_token = await seal(secret, props);
   return jsonResponse({
     access_token,
@@ -221,10 +193,8 @@ function wellKnownMetadata(origin: string) {
   };
 }
 
-// RFC 9728 protected-resource metadata. MCP clients (incl. Claude) fetch
-// this during connection discovery to confirm which authorization
-// server(s) are valid for this resource — without it, clients may treat
-// the connection as failed even after a successful token exchange.
+// RFC 9728 — without this, MCP clients treat the connection as failed
+// even after a successful token exchange.
 function protectedResourceMetadata(origin: string) {
   return {
     resource: `${origin}/mcp`,
@@ -254,13 +224,8 @@ async function handleMcp(request: Request, env: Env): Promise<Response> {
   try {
     server = await createServer(props);
   } catch (err) {
-    // Session setup (config-path reads, TOML parsing) failing shouldn't
-    // crash the request with a bare 500 — distinguish "your Nextcloud
-    // credential is wrong" (401, re-auth via /authorize is the fix) from
-    // everything else (bad config path, malformed TOML, Nextcloud
-    // unreachable — 502). Neither branch echoes `err.message` back to the
-    // client: a parse error could quote back arbitrary bytes from the
-    // user's own config file.
+    // Distinguish bad credentials (401) from anything else (502); never
+    // echo err.message — a parse error could quote the user's own config.
     if (err instanceof WebDAVHttpError && err.status === 401) {
       return new Response(
         "Nextcloud authentication failed. Reconnect via /authorize.",
@@ -273,10 +238,7 @@ async function handleMcp(request: Request, env: Env): Promise<Response> {
     );
   }
 
-  // Fresh transport per request, stateless (no sessionIdGenerator): matches
-  // `server` above, which is also rebuilt per request from the sealed
-  // token — there's no in-memory or DO-backed session to resume across
-  // requests, so a stateful transport would just add unused machinery.
+  // Stateless, rebuilt per request like `server` — no session to resume.
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });

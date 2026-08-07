@@ -29,6 +29,9 @@ importers:
       '@dav-worker/calendar-tools':
         specifier: workspace:*
         version: link:../../packages/calendar/tools
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../packages/config/parser
       '@dav-worker/files-locations':
         specifier: workspace:*
         version: link:../../packages/files/locations
@@ -63,6 +66,9 @@ importers:
       '@dav-worker/calendar-tools':
         specifier: workspace:*
         version: link:../../packages/calendar/tools
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../packages/config/parser
       '@dav-worker/files-locations':
         specifier: workspace:*
         version: link:../../packages/files/locations
@@ -134,6 +140,18 @@ importers:
       fast-xml-parser:
         specifier: ^4.4.0
         version: 4.5.7
+
+  src/packages/config/parser:
+    dependencies:
+      '@dav-worker/calendar-tools':
+        specifier: workspace:*
+        version: link:../../calendar/tools
+      '@dav-worker/files-locations':
+        specifier: workspace:*
+        version: link:../../files/locations
+      smol-toml:
+        specifier: ^1.7.0
+        version: 1.7.0
 
   src/packages/files/contracts: {}
 
