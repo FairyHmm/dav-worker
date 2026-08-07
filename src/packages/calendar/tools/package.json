@@ -10,10 +10,10 @@
     "@dav-worker/calendar-contracts": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/clients-webdav": "workspace:*",
-    "smol-toml": "^1.7.0",
+    "smol-toml": "^1.7.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.30.0"
   }
 }

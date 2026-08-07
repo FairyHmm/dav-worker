@@ -1,0 +1,17 @@
+{
+  "name": "@dav-worker/ui-shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "@lucide/svelte": "^1.29.0",
+    "svelte": "^5.56.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.0"
+  }
+}
