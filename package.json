@@ -18,7 +18,7 @@
   "devDependencies": {
     "@types/node": "^26.1.2",
     "source-map-explorer": "^2.5.3",
-    "tsx": "^4.23.8",
+    "tsx": "^4.23.9",
     "typescript": "^6.0.3",
     "wrangler": "^4.119.0"
   }

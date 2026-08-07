@@ -8,6 +8,6 @@
   "dependencies": {
     "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
-    "smol-toml": "^1.7.0"
+    "smol-toml": "^1.7.1"
   }
 }

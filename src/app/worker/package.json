@@ -27,7 +27,7 @@
     "@dav-worker/worker-trim": "workspace:*",
     "esbuild": "^0.28.1",
     "source-map-explorer": "^2.5.3",
-    "tsx": "^4.23.8",
+    "tsx": "^4.23.9",
     "wrangler": "^4.119.0"
   }
 }
