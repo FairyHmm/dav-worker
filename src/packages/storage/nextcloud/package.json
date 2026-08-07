@@ -11,6 +11,7 @@
     "@dav-worker/calendar-contracts": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/task-contracts": "workspace:*",
-    "@dav-worker/files-contracts": "workspace:*"
+    "@dav-worker/files-contracts": "workspace:*",
+    "@dav-worker/files-types": "workspace:*"
   }
 }

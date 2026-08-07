@@ -10,6 +10,7 @@
     "@dav-worker/files-contracts": "workspace:*",
     "@dav-worker/files-parser": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
+    "@dav-worker/files-types": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

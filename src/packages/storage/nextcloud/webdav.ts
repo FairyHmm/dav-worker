@@ -15,6 +15,7 @@ import {
   mergedProps,
   propOrNull,
 } from "@dav-worker/clients-webdav";
+import { checkReadable } from "@dav-worker/files-types";
 import { asNextcloudCredential, basicAuthHeader } from "./credential.js";
 
 export function createNextcloudWebDAVStorage(credential: Credential): FileStorage {
@@ -70,11 +71,10 @@ export function createNextcloudWebDAVStorage(credential: Credential): FileStorag
       const res = await transport.request("GET", path(p), { expectStatus: [200, 404] });
       if (res.status === 404) throw new Error(`File not found: ${p}`);
 
-      const contentType = res.headers.get("content-type") ?? "application/octet-stream";
-      if (!contentType.startsWith("text/") && contentType !== "application/json") {
+      const { readable, contentType } = checkReadable(p, res.headers.get("content-type"));
+      if (!readable) {
         throw new Error(`Binary files cannot be read as text (Content-Type: ${contentType}).`);
       }
-
       return { content: await res.text(), contentType };
     },
 

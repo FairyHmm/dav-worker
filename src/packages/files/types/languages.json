@@ -1,0 +1,12 @@
+{
+  "TypeScript": {
+    "type": "programming",
+    "contentType": "text/plain",
+    "extensions": [".ts", ".tsx", ".cts", ".mts"]
+  },
+  "Markdown": {
+    "type": "markup",
+    "contentType": "text/markdown",
+    "extensions": [".md", ".mdx"]
+  }
+}
