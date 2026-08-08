@@ -1,25 +1,18 @@
 import { toString } from "mdast-util-to-string";
 import type { Root } from "mdast";
-import { parseDocument, stringifyNodes } from "./document.js";
+import { parseDocument, stringifyNodes } from "./document";
+
+import type { WriteMode } from "../types";
 
 export type WriteScope = "body" | "subtree";
-export type WriteMode = "replace" | "append" | "prepend";
 
 interface HeadingRange {
-  start: number; // index of the heading node itself
-  // index of the first heading (any depth) after start — where this
-  // heading's body ends, i.e. where its first child heading (if any) begins
-  bodyEnd: number;
-  // index of the first heading with depth <= this heading's depth after
-  // start, i.e. where the whole subtree ends — same boundary flattenHeading
-  // relies on for read
-  subtreeEnd: number;
+  start: number;
+  bodyEnd: number; // first heading after start — body boundary
+  subtreeEnd: number; // first heading with depth <= start — subtree boundary
 }
 
-function findHeadingRange(
-  root: Root,
-  title: string,
-): HeadingRange | undefined {
+function findHeadingRange(root: Root, title: string): HeadingRange | undefined {
   const children = root.children;
   const start = children.findIndex(
     (c) => c.type === "heading" && toString(c) === title,
@@ -43,23 +36,8 @@ function findHeadingRange(
   return { start, bodyEnd, subtreeEnd };
 }
 
-// Per SPEC.md's scope × mode table:
-//   body/replace     — replace nodes between heading and first child
-//   subtree/replace  — replace heading + all descendants + their content
-//   body/append      — append to end of body, before first child
-//   subtree/append   — append after last node of subtree
-//   body/prepend     — insert right after the heading, before existing body
-//   subtree/prepend  — insert right after the heading line, before the
-//                       body (same insertion point as body/prepend — the
-//                       heading itself is never duplicated or moved)
-//
-// `content` is parsed as its own mini-document and spliced in as nodes —
-// for scope="subtree" mode="replace" this must include the heading line
-// itself (the same shape readBlock returns), every other combination must
-// not, since the heading node stays put and only body content is spliced.
-//
-// Returns the full updated document, or undefined if no heading with that
-// title exists.
+// scope × mode: see SPEC.md. subtree/replace must include heading line;
+// other combos must not. Returns updated doc, or undefined if heading missing.
 export function writeBlock(
   source: string,
   title: string,
@@ -90,8 +68,7 @@ export function writeBlock(
   } else if (scope === "subtree" && mode === "append") {
     root.children.splice(range.subtreeEnd, 0, ...newNodes);
   } else {
-    // prepend, both scopes — insert right after the heading line, before
-    // any existing body content
+    // Both scopes insert after heading line.
     root.children.splice(range.start + 1, 0, ...newNodes);
   }
 

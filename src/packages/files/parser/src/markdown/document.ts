@@ -8,19 +8,14 @@ import type { Root, RootContent } from "mdast";
 import {
   preprocessPercentComments,
   restorePercentComments,
-} from "./preprocess.js";
+} from "./preprocess";
 
-// vfile's constructor calls process.cwd() unless `cwd` is explicitly
-// supplied — workerd has no `process`, so that call throws. Always
-// construct our own VFile with `cwd` set rather than letting unified
-// wrap a bare string/object internally.
+// workerd has no `process` — must set cwd explicitly.
 function toVFile(value: string): VFile {
   return new VFile({ value, cwd: "/" });
 }
 
-// The single parse+stringify pipeline. Both directions share one processor
-// so a future syntax addition (another remark plugin) only needs to be
-// listed once here.
+// Shared processor — new plugins only listed once.
 const processor = unified()
   .use(remarkParse)
   .use(remarkFrontmatter, ["yaml"])
@@ -31,13 +26,8 @@ export function parseDocument(source: string): Root {
   return processor.parse(toVFile(preprocessPercentComments(source))) as Root;
 }
 
-// Renders a list of mdast nodes back to markdown text via the same
-// pipeline's stringify step, rather than manual string splicing. Every
-// call site (readBlock, writeBlock) goes through this one function, so
-// restorePercentComments only needs to be wired in here to cover both.
+// Single stringify path — restorePercentComments wired once covers all callers.
 export function stringifyNodes(nodes: RootContent[]): string {
   const root: Root = { type: "root", children: nodes };
-  return restorePercentComments(
-    String(processor.stringify(root, toVFile(""))),
-  );
+  return restorePercentComments(String(processor.stringify(root, toVFile(""))));
 }

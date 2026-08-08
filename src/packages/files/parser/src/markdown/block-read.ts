@@ -1,9 +1,8 @@
 import type { RootContent } from "mdast";
-import { parseDocument, stringifyNodes } from "./document.js";
-import { buildHeadingTree, type HeadingNode } from "./heading-tree.js";
+import { parseDocument, stringifyNodes } from "./document";
+import { buildHeadingTree, type HeadingNode } from "./heading-tree";
 
-// Exact-match search over the tree, depth-first. Headings aren't guaranteed
-// unique in a document; first match wins.
+// First match wins — headings aren't unique.
 export function findHeading(
   headings: HeadingNode[],
   title: string,
@@ -16,8 +15,7 @@ export function findHeading(
   return undefined;
 }
 
-// "Subtree" per SPEC.md: the heading node + all content + all descendant
-// headings recursively, in original document order.
+// Heading + all descendants in document order.
 export function flattenHeading(heading: HeadingNode): RootContent[] {
   return [
     heading.node,
@@ -26,8 +24,7 @@ export function flattenHeading(heading: HeadingNode): RootContent[] {
   ];
 }
 
-// Returns the rendered markdown for a heading's subtree, or undefined if no
-// heading with that title exists in the document.
+// Renders heading subtree to markdown, or undefined if not found.
 export function readBlock(source: string, title: string): string | undefined {
   const tree = buildHeadingTree(parseDocument(source), true);
   const heading = findHeading(tree, title);
@@ -35,10 +32,7 @@ export function readBlock(source: string, title: string): string | undefined {
   return stringifyNodes(flattenHeading(heading));
 }
 
-// "Body" per SPEC.md: content directly under the heading only, up to (not
-// including) the first child heading. Excludes the heading line itself —
-// matches what writeBlock's body/replace expects as input, so a read-then-
-// write round trip on scope="body" doesn't duplicate or drop the heading.
+// Excludes heading line — read/write round trip must not duplicate it.
 export function readBody(source: string, title: string): string | undefined {
   const tree = buildHeadingTree(parseDocument(source), true);
   const heading = findHeading(tree, title);

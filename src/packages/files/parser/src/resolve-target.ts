@@ -1,10 +1,8 @@
-import { handlers, type MarkdownAddress } from "./registry.js";
-import type { RawAddress } from "./raw/index.js";
-import type { WriteMode } from "./markdown/index.js";
+import { handlers, type MarkdownAddress } from "./registry";
+import type { RawAddress } from "./raw/index";
+import type { WriteMode } from "./types";
 
-// Mirrors the tool-layer TargetSchema union one-to-one (SPEC-PARSER.md),
-// so mutual exclusivity is structural — no branch needs to check both
-// `block` and `from` being set.
+// Mutual exclusivity is structural — no branch checks both block and from.
 type ResolveInput =
   | {
       block: string;
@@ -15,9 +13,7 @@ type ResolveInput =
   | { from: number; to?: number; block?: undefined; scope?: undefined }
   | { block?: undefined; scope?: undefined; from?: undefined; to?: undefined };
 
-// Bound read/write avoids pairing a handler with its address at each call
-// site. notFoundError/describe live here too, shared by file_read/write,
-// so the per-kind wording isn't duplicated across both.
+// Bound read/write + shared error/describe wording to avoid duplication.
 export type Target =
   | {
       kind: "markdown" | "raw";
@@ -32,8 +28,7 @@ export type Target =
     }
   | { kind: "whole-file" };
 
-// Only shifts positive (absolute) indices — negative ones are "N-th from
-// end" and stay correct on their own as the file grows/shrinks.
+// Negative indices are self-correcting as file grows/shrinks.
 function shiftPositive(n: number, shift: number): number {
   return n > 0 ? n + shift : n;
 }
@@ -62,8 +57,7 @@ export function resolveTarget(
     const shiftedTo = to !== undefined ? shiftPositive(to, shift) : to;
     const address: RawAddress = { from: shiftedFrom, to: shiftedTo };
     const handler = handlers.raw;
-    // Show pre-shift indices — the caller planned this against their own
-    // original read, so the message should match what they wrote.
+    // Pre-shift indices match what the caller originally read.
     const toLabel = to ?? (input.from < 0 ? "end" : input.from);
     return {
       kind: "raw",

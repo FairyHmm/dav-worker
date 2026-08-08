@@ -1,5 +1,5 @@
-import { parseDocument } from "./document.js";
-import { buildHeadingTree, type HeadingNode } from "./heading-tree.js";
+import { parseDocument } from "./document";
+import { buildHeadingTree, type HeadingNode } from "./heading-tree";
 
 export interface OutlineEntry {
   level: number;
@@ -15,8 +15,7 @@ function toOutline(headings: HeadingNode[]): OutlineEntry[] {
   }));
 }
 
-// Heading titles/levels only, no body content — see buildHeadingTree's
-// includeBody note.
+// Titles/levels only — no body content allocated.
 export function outline(source: string): OutlineEntry[] {
   return toOutline(buildHeadingTree(parseDocument(source), false));
 }

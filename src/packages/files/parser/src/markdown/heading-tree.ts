@@ -4,17 +4,13 @@ import type { Root, RootContent, Heading } from "mdast";
 export interface HeadingNode {
   level: number;
   title: string;
-  node: Heading; // kept for the block-read/write reconstruction step
-  body: RootContent[]; // nodes between this heading and its first child heading
+  node: Heading; // for block-read/write reconstruction
+  body: RootContent[]; // between heading and first child heading
   children: HeadingNode[];
 }
 
-// mdast headings are flat siblings — nesting is implied only by `depth` —
-// so this reconstructs the hierarchy with a stack keyed on depth.
-//
-// includeBody is false for outline() — no reason to allocate and hold onto
-// body node arrays when only the heading titles/levels are needed. Block
-// read/write call this with includeBody = true (the default).
+// mdast headings are flat — depth implies nesting, stack rebuilds hierarchy.
+// includeBody=false for outline() to skip body allocation.
 export function buildHeadingTree(
   root: Root,
   includeBody = true,
@@ -49,9 +45,7 @@ export function buildHeadingTree(
       continue;
     }
 
-    // Belongs to whichever heading is currently open; stops accumulating
-    // once that heading's first child heading appears and becomes the top
-    // of the stack instead.
+    // Stops accumulating when child heading closes the parent.
     if (includeBody && stack.length > 0) {
       stack[stack.length - 1].body.push(child);
     }
