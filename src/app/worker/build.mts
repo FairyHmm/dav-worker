@@ -67,10 +67,10 @@ const buildOptions: BuildOptions = {
   sourcemap: true,
   metafile: true,
 
-  // no_bundle:true skips Wrangler's own .toml/.csv text loader too, so it's redone here.
+  // no_bundle:true skips Wrangler's own .toml/.csv text loader too
   loader: {
     ".toml": "text",
-    ".csv": "text",
+    ".html": "text",
   },
 
   plugins: [

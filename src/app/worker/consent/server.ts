@@ -1,9 +1,16 @@
 // Consent screen + code issuance. No grant store: client_id is itself a
 // sealed token (auth.ts), and the code handed back is a sealed, short-lived
 // blob of the credential + PKCE challenge — nothing persisted server-side.
+//
+// The consent screen itself is a Svelte SPA, built separately (see
+// vite.config.ts) into a single static HTML file and pulled in here
+// as raw text via esbuild's .html loader (../build.mts). This module's only
+// UI job is injecting per-request data (client name, hidden OAuth fields)
+// into that static shell — it never touches Svelte's mount shape.
 
-import { seal, open, verifyPkce, TokenError } from "./auth";
+import { seal, open, verifyPkce, TokenError } from "../auth";
 import type { SessionProps } from "../index";
+import consentHtml from "./dist/index.html";
 
 interface AuthorizeParams {
   clientId: string;
@@ -25,6 +32,7 @@ interface CodePayload {
 }
 
 const CODE_TTL_SECONDS = 120;
+const DEFAULT_CONFIG_PATH = "/.config/dav-worker.conf";
 
 export async function handleAuthorize(
   request: Request,
@@ -57,7 +65,7 @@ export async function handleAuthorize(
     });
   }
 
-  return new Response(renderConsentForm(params, registration), {
+  return new Response(renderConsentPage(params, registration), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 }
@@ -77,7 +85,7 @@ async function handleConsentSubmit(
   const username = String(form.get("username") ?? "").trim();
   const password = String(form.get("password") ?? "");
   const configPath =
-    String(form.get("configPath") ?? "").trim() || "/.config/dav-worker.conf";
+    String(form.get("configPath") ?? "").trim() || DEFAULT_CONFIG_PATH;
 
   // Re-validated here too: the client_id/redirect_uri came back from the
   // browser via hidden fields, so treat them as untrusted input again.
@@ -106,67 +114,28 @@ async function handleConsentSubmit(
   return Response.redirect(redirect.toString(), 302);
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+// JS-string-in-HTML injection, not attribute/text interpolation — only
+// escape needed is closing the </script> the payload sits inside, so a
+// dedicated JSON escape (not escapeHtml's &/</>/") is the correct tool.
+function escapeForInlineScript(json: string): string {
+  return json.replace(/</g, "\\u003c");
 }
 
-function renderConsentForm(
+function renderConsentPage(
   params: AuthorizeParams,
   registration: ClientRegistration,
 ): string {
-  const clientName = registration.client_name ?? params.clientId;
+  const data = {
+    clientName: registration.client_name ?? params.clientId,
+    clientId: params.clientId,
+    redirectUri: params.redirectUri,
+    state: params.state,
+    codeChallenge: params.codeChallenge,
+    defaultConfigPath: DEFAULT_CONFIG_PATH,
+  };
 
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Connect dav-worker</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 3rem auto; padding: 0 1rem; }
-    h1 { font-size: 1.1rem; }
-    label { display: block; margin-top: 1rem; font-size: 0.9rem; }
-    input { width: 100%; box-sizing: border-box; padding: 0.5rem; margin-top: 0.25rem; }
-    button { margin-top: 1.5rem; padding: 0.6rem 1.2rem; }
-    p.hint { font-size: 0.8rem; color: #555; }
-    code { font-size: 0.85em; background: #f2f2f2; padding: 0.1rem 0.3rem; border-radius: 3px; }
-  </style>
-</head>
-<body>
-  <h1>${escapeHtml(clientName)} wants to connect to your Nextcloud</h1>
-  <p class="hint">Nothing you enter here is stored on the server. Your Nextcloud credential
-    and config paths travel only inside your client's own encrypted access token.</p>
-  <form method="POST">
-    <input type="hidden" name="clientId" value="${escapeHtml(params.clientId)}" />
-    <input type="hidden" name="redirectUri" value="${escapeHtml(params.redirectUri)}" />
-    <input type="hidden" name="state" value="${escapeHtml(params.state)}" />
-    <input type="hidden" name="codeChallenge" value="${escapeHtml(params.codeChallenge)}" />
-
-    <label>Nextcloud host
-      <input type="url" name="host" placeholder="https://cloud.example.com" required />
-    </label>
-    <label>Username
-      <input type="text" name="username" required />
-    </label>
-    <label>Password
-      <input type="password" name="password" required />
-    </label>
-    <p class="hint">App passwords are recommended over your main account password.</p>
-
-    <label>Config path
-      <input type="text" name="configPath" placeholder="/.config/dav-worker.conf" />
-    </label>
-    <p class="hint">Created automatically if missing. The file is TOML-formatted, but a
-      <code>.conf</code> extension is recommended since Nextcloud won't open <code>.toml</code>
-      files natively in its web UI.</p>
-
-    <button type="submit">Connect</button>
-  </form>
-</body>
-</html>`;
+  const script = `<script>window.__CONSENT__=${escapeForInlineScript(JSON.stringify(data))}</script>`;
+  return consentHtml.replace("<!--consent-data-->", script);
 }
 
 export async function exchangeCode(

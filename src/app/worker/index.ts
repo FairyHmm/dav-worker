@@ -23,8 +23,8 @@ import {
   createNextcloudCalDAVTaskStorage,
   WebDAVHttpError,
 } from "@dav-worker/storage-nextcloud";
-import { handleAuthorize, exchangeCode } from "./src/consent";
-import { seal, open, TokenError } from "./src/auth";
+import { handleAuthorize, exchangeCode } from "./consent/server";
+import { seal, open, TokenError } from "./auth";
 
 // No grant store — every token is self-contained (see auth.ts), living
 // only encrypted in the client's hands, never server-side.

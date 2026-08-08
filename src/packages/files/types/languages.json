@@ -8,5 +8,10 @@
     "type": "markup",
     "contentType": "text/markdown",
     "extensions": [".md", ".mdx"]
+  },
+  "Svelte": {
+    "type": "programming",
+    "contentType": "text/plain",
+    "extensions": [".svelte"]
   }
 }

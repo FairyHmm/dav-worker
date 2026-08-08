@@ -15,10 +15,22 @@
     "strict": true,
     "skipLibCheck": true,
     "types": ["./src/app/worker/worker-configuration.d.ts", "node"],
+    "paths": {
+      "$lib": ["./src/packages/ui/shared/src/lib"],
+      "$lib/*": ["./src/packages/ui/shared/src/lib/*"],
+      "$components": ["./src/packages/ui/shared/src/lib/components"],
+      "$components/*": ["./src/packages/ui/shared/src/lib/components/*"],
+      "$utils": ["./src/packages/ui/shared/src/lib/utils.ts"],
+      "$hooks": ["./src/packages/ui/shared/src/lib/hooks"],
+      "$hooks/*": ["./src/packages/ui/shared/src/lib/hooks/*"]
+    }
   },
   "include": [
     "src/app/worker/worker-configuration.d.ts",
     "src/**/*.ts",
     "src/**/*.mts",
   ],
+  // Browser-side Svelte source (DOM lib, vite/client types) — has its own
+  // tsconfig.json extending tsconfig.base.json, same as ui/file-explorer.
+  "exclude": ["src/app/worker/consent/**"],
 }

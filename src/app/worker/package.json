@@ -5,8 +5,10 @@
   "type": "module",
   "main": "./index.ts",
   "scripts": {
-    "build": "tsx build.mts",
+    "build": "pnpm run build:consent && tsx build.mts",
+    "build:consent": "vite build --config consent/vite.config.ts",
     "dev": "wrangler dev -c wrangler.jsonc",
+    "dev:consent": "vite dev --config consent/vite.config.ts",
     "deploy": "pnpm run build && wrangler deploy -c wrangler.jsonc",
     "deploy:dry-run": "pnpm run build && wrangler deploy --dry-run --outdir dist -c wrangler.jsonc",
     "analyze": "source-map-explorer dist/**/*.js --no-border-checks",
@@ -21,13 +23,20 @@
     "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
     "@dav-worker/task-tools": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.30.0"
+    "@dav-worker/ui-shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "svelte": "^5.0.0"
   },
   "devDependencies": {
     "@dav-worker/worker-trim": "workspace:*",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tailwindcss/vite": "^4.0.0",
     "esbuild": "^0.28.1",
     "source-map-explorer": "^2.5.3",
+    "tailwindcss": "^4.0.0",
     "tsx": "^4.23.9",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.0.3",
     "wrangler": "^4.119.0"
   }
 }

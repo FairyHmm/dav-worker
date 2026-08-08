@@ -1,12 +1,20 @@
 @import "tailwindcss";
+@source "./src/lib/components/**/*.svelte";
 
 /* Host tokens per SPEC-UI.md "Theming". Fallbacks keep this correct
    with zero host support. */
 
+:root {
+  color-scheme: light dark;
+}
+
 @theme inline {
   /* Backgrounds */
   --color-host-bg: var(--color-background-primary, Canvas);
-  --color-host-bg-secondary: var(--color-background-secondary, Canvas);
+  --color-host-bg-secondary: var(
+    --color-background-secondary,
+    color-mix(in srgb, CanvasText 4%, Canvas)
+  );
   --color-host-bg-tertiary: var(
     --color-background-tertiary,
     color-mix(in srgb, CanvasText 6%, Canvas)
@@ -32,11 +40,11 @@
   /* Borders */
   --color-host-border: var(
     --color-border-primary,
-    color-mix(in srgb, CanvasText 16%, Canvas)
+    color-mix(in srgb, CanvasText 28%, Canvas)
   );
   --color-host-border-secondary: var(
     --color-border-secondary,
-    color-mix(in srgb, CanvasText 10%, Canvas)
+    color-mix(in srgb, CanvasText 16%, Canvas)
   );
 
   /* Semantic states */
@@ -79,9 +87,55 @@
   /* Ours, not a host token — commit-on-release settle time. */
   --duration-fast: 100ms;
   --duration-settle: 160ms;
+
+  /* Control sizing — single source for interactive-element heights/padding.
+     Named in the --spacing-* namespace so h-*, w-*, px-*, py-*, size-*
+     all resolve these the same way Tailwind resolves h-10 etc. Every
+     control (Button, Input, future Select) stays in lockstep instead of
+     each hardcoding its own h-9/h-10/h-11. */
+  --spacing-host-control-sm: 2.25rem;
+  --spacing-host-control-md: 2.5rem;
+  --spacing-host-control-lg: 2.75rem;
+
+  --spacing-host-control-px-sm: 0.75rem;
+  --spacing-host-control-px-md: 1rem;
+  --spacing-host-control-px-lg: 2rem;
+  --spacing-host-control-py-md: 0.5rem;
+
+  --spacing-host-ring-offset: 2px;
+
+  /* shadcn theme, mapped onto the host-* tokens above. Lives in this same
+     @theme inline block (not a plain :root) so Tailwind actually emits
+     the bg-card / text-primary-foreground / etc. utilities — a plain
+     :root block only defines custom properties usable via var(), not
+     classes, which was why button/label text had no color at all. */
+  --color-background: var(--color-host-bg);
+  --color-foreground: var(--color-host-text);
+  --color-card: var(--color-host-bg-secondary);
+  --color-card-foreground: var(--color-host-text);
+  --color-popover: var(--color-host-bg-secondary);
+  --color-popover-foreground: var(--color-host-text);
+  --color-primary: var(--color-host-bg-inverse);
+  --color-primary-foreground: var(--color-host-bg);
+  --color-secondary: var(--color-host-bg-tertiary);
+  --color-secondary-foreground: var(--color-host-text);
+  --color-muted: var(--color-host-bg-tertiary);
+  --color-muted-foreground: var(--color-host-text-secondary);
+  --color-accent: var(--color-host-bg-tertiary);
+  --color-accent-foreground: var(--color-host-text);
+  --color-destructive: var(--color-host-danger-bg);
+  --color-destructive-foreground: var(--color-host-danger-text);
+  --color-border: var(--color-host-border);
+  --color-input: var(--color-host-border);
+  --color-ring: var(--color-host-ring);
+  --radius-sm: var(--radius-host-sm);
+  --radius-md: var(--radius-host-md);
+  --radius-lg: var(--radius-host-lg);
+  --radius-xl: calc(var(--radius-host-lg) + 4px);
 }
 
-html, body {
+html,
+body {
   margin: 0;
   height: 100%;
   background: var(--color-host-bg);
@@ -101,7 +155,9 @@ html, body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
