@@ -3,10 +3,8 @@ import type { ErrorMode } from "./errorMode.js";
 // Structural, not imported, per SPEC-MONOREPO.md A.7.
 type BatchResult = { content: unknown[]; isError?: boolean };
 
-// fn always reports its own next state; callers with nothing to track
-// just pass state through unchanged (TState defaults to undefined).
-// Keeps the loop to one shape instead of a stateful/stateless branch
-// with a cast on each side.
+// fn always reports its own next state (TState defaults to undefined for
+// stateless callers) so the loop stays one shape, not a stateful/stateless branch.
 export async function runBatch<
   TItem,
   TResult extends BatchResult,

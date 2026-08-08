@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-// Per SPEC-BATCH.md Appendix A: best-effort is the default. "stop" is an
-// opt-in fail-fast mode for same-tool batches where items happen to have
-// an ordering dependency (rare, but the caller knows their own data).
+// "stop" is opt-in — only the caller knows if their items have an
+// ordering dependency that makes fail-fast the right call.
 export const ErrorModeSchema = z
   .enum(["continue", "stop"])
   .default("continue")

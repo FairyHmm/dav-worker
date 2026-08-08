@@ -12,9 +12,35 @@ export interface RunBatchToolParams<Shape extends ZodRawShape> {
 }
 
 // Owns resolve/validate/run/shape so tool files only supply per-item
-// logic and err() (ok/err stay per-package per A.7). fn keeps a plain
-// (item) => TResult overload for the common no-state case — normalized
-// below into runBatch's single (item, state) => { result, state } shape.
+// logic and err() (ok/err stay per-package per A.7).
+
+// Stateless: no `options`, fn returns TResult directly.
+export async function runBatchTool<
+  Shape extends ZodRawShape,
+  RequiredKeys extends keyof z.infer<z.ZodObject<Shape>> = never,
+  TResult extends BatchResult = BatchResult,
+>(
+  params: RunBatchToolParams<Shape> & Record<string, unknown>,
+  itemShape: Shape,
+  err: (e: unknown) => TResult,
+  fn: (item: Resolved<Shape, RequiredKeys>) => Promise<TResult>,
+): Promise<TResult>;
+// Stateful: `options` present, fn reports its own next state.
+export async function runBatchTool<
+  Shape extends ZodRawShape,
+  RequiredKeys extends keyof z.infer<z.ZodObject<Shape>> = never,
+  TResult extends BatchResult = BatchResult,
+  TState = undefined,
+>(
+  params: RunBatchToolParams<Shape> & Record<string, unknown>,
+  itemShape: Shape,
+  err: (e: unknown) => TResult,
+  fn: (
+    item: Resolved<Shape, RequiredKeys>,
+    state: TState,
+  ) => Promise<{ result: TResult; state: TState }>,
+  options: { initial: TState; didApply: (result: TResult) => boolean },
+): Promise<TResult>;
 export async function runBatchTool<
   Shape extends ZodRawShape,
   RequiredKeys extends keyof z.infer<z.ZodObject<Shape>> = never,
@@ -39,6 +65,8 @@ export async function runBatchTool<
   );
   if (!resolved.ok) return err(new Error(resolved.error));
 
+  // Overloads guarantee fn matches `options`'s presence; the implementation
+  // signature can't express that, so one cast here replaces two at each call site.
   const withState = options
     ? (fn as (
         item: Resolved<Shape, RequiredKeys>,
