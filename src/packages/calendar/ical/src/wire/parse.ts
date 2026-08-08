@@ -1,24 +1,7 @@
-// Generic iCalendar component tree — protocol-ignorant, shared by VEVENT and
-// VTODO. Mirrors parser/'s role but for iCalendar instead of Markdown: this
-// module only knows about lines/properties/components, not what SUMMARY or
-// DTSTART mean semantically. Field-level meaning lives in component.ts.
+import type { ICalComponent, ICalProperty } from "../types";
 
-export interface ICalProperty {
-  value: string;
-  params: Record<string, string>;
-}
-
-export interface ICalComponent {
-  name: string;
-  // One property name can occur more than once (e.g. multiple ATTENDEEs),
-  // so every name maps to an array even when there's usually just one.
-  properties: Record<string, ICalProperty[]>;
-  components: ICalComponent[];
-}
-
-// RFC 5545 §3.1: unfold — a CRLF followed by a single space or tab is a
-// folded continuation of the previous line, not a real line break. Also
-// tolerate bare \n (some servers/clients don't send \r\n).
+// RFC 5545 §3.1: CRLF + whitespace is a folded continuation, not a line break.
+// Also tolerate bare \n since some servers don't send \r\n.
 export function unfold(text: string): string[] {
   const raw = text.split(/\r\n|\r|\n/);
   const lines: string[] = [];
@@ -32,12 +15,13 @@ export function unfold(text: string): string[] {
   return lines;
 }
 
-// Splits one unfolded content line into name, params, and raw value.
-// Format: NAME;PARAM1=VAL1;PARAM2=VAL2:VALUE — params and the name are
-// separated from the value at the first colon that isn't inside a
-// double-quoted param value (RFC 5545 permits quoting a param value that
-// itself contains a colon, e.g. TZID or a URI-valued param).
-function splitContentLine(line: string): { name: string; params: Record<string, string>; value: string } {
+// Param values can contain colons when double-quoted (RFC 5545 permits this
+// for TZID and URI-valued params), so we scan for the first unquoted colon.
+function splitContentLine(line: string): {
+  name: string;
+  params: Record<string, string>;
+  value: string;
+} {
   let inQuotes = false;
   let colonIdx = -1;
   for (let i = 0; i < line.length; i++) {
@@ -69,10 +53,8 @@ function splitContentLine(line: string): { name: string; params: Record<string, 
   return { name: name.toUpperCase(), params, value };
 }
 
-// Recursive-descent parse of a full VCALENDAR (or any BEGIN/END block) into
-// an ICalComponent tree. Returns the outermost component (typically
-// VCALENDAR) — callers use component.ts's findComponent() to locate a
-// specific VEVENT/VTODO inside it.
+// Recursive-descent parse of a VCALENDAR (or any BEGIN/END block).
+// Callers use findComponent() to locate VEVENT/VTODO inside the result.
 export function parseCalendar(text: string): ICalComponent {
   const lines = unfold(text);
   let pos = 0;

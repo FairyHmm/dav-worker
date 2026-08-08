@@ -1,29 +1,14 @@
-import type { ICalComponent } from "./parse.js";
-import { removeProperty, isoToBasic, type ICalDateTime } from "./component.js";
+import type { ICalComponent, ICalDateTime, ICalRecurrence } from "../types";
+import { removeProperty } from "../tree/accessors";
+import { isoToBasic } from "../tree/datetime";
 
-// RRULE/EXDATE (RFC 5545 §3.8.5) helpers — split out of component.ts since
-// this pair has its own cohesive doc/shape and was growing that file past
-// its "general field helpers" scope. Still protocol-ignorant like the rest
-// of ical/: knows RFC 5545 value formats, not dav-worker's request schema.
-
-// RRULE is a structured value — semicolon-separated KEY=VALUE pairs, e.g.
-// "FREQ=WEEKLY;INTERVAL=2;UNTIL=20260101T000000Z" — not a plain TEXT
-// field, so it gets its own get/set rather than reusing getText/setText.
-// Preserves whatever parts are present (COUNT, BYDAY, etc.) even though
-// dav-worker's v1 schedule schema only exposes freq/interval/until — that
-// restriction belongs to tools/schedule's mapping, not here.
-export interface ICalRecurrence {
-  freq: string;
-  interval?: number;
-  until?: string; // RFC 5545 basic DATE or DATE-TIME
-  count?: number;
-  byday?: string[];
-  // Any other RRULE parts (BYMONTH, BYSETPOS, WKST, ...) round-trip through
-  // here untouched even though nothing else in this codebase reads them yet.
-  extra?: Record<string, string>;
-}
-
-const RRULE_KNOWN_KEYS = new Set(["FREQ", "INTERVAL", "UNTIL", "COUNT", "BYDAY"]);
+const RRULE_KNOWN_KEYS = new Set([
+  "FREQ",
+  "INTERVAL",
+  "UNTIL",
+  "COUNT",
+  "BYDAY",
+]);
 
 export function getRRule(component: ICalComponent): ICalRecurrence | undefined {
   const prop = component.properties["RRULE"]?.[0];
@@ -64,8 +49,15 @@ export function getRRule(component: ICalComponent): ICalRecurrence | undefined {
     }
   }
 
-  if (!freq) return undefined; // malformed RRULE with no FREQ — treat as absent
-  return { freq, interval, until, count, byday, extra: Object.keys(extra).length ? extra : undefined };
+  if (!freq) return undefined;
+  return {
+    freq,
+    interval,
+    until,
+    count,
+    byday,
+    extra: Object.keys(extra).length ? extra : undefined,
+  };
 }
 
 export function setRRule(component: ICalComponent, rule: ICalRecurrence): void {
@@ -73,10 +65,11 @@ export function setRRule(component: ICalComponent, rule: ICalRecurrence): void {
   if (rule.interval !== undefined) parts.push(`INTERVAL=${rule.interval}`);
   if (rule.until !== undefined) parts.push(`UNTIL=${rule.until}`);
   if (rule.count !== undefined) parts.push(`COUNT=${rule.count}`);
-  if (rule.byday !== undefined && rule.byday.length > 0) parts.push(`BYDAY=${rule.byday.join(",")}`);
+  if (rule.byday !== undefined && rule.byday.length > 0)
+    parts.push(`BYDAY=${rule.byday.join(",")}`);
   if (rule.extra) {
     for (const key of Object.keys(rule.extra)) {
-      if (RRULE_KNOWN_KEYS.has(key)) continue; // don't double-emit a known key stashed in extra by mistake
+      if (RRULE_KNOWN_KEYS.has(key)) continue;
       parts.push(`${key}=${rule.extra[key]}`);
     }
   }
@@ -87,11 +80,8 @@ export function removeRRule(component: ICalComponent): void {
   removeProperty(component, "RRULE");
 }
 
-// EXDATE is a DATE-TIME-list value — one or more comma-separated
-// dates/date-times, optionally split across multiple EXDATE lines (each
-// possibly with its own VALUE=DATE/TZID params). Not TEXT, so
-// getTextList/setTextList (which unescape TEXT-list commas) don't apply —
-// commas here separate dates outright, no escaping involved.
+// EXDATE commas separate dates outright (not TEXT-list commas), so no
+// escaping is involved — just split on comma and parse each value.
 export function getExdates(component: ICalComponent): ICalDateTime[] {
   const props = component.properties["EXDATE"];
   if (!props) return [];
@@ -106,11 +96,8 @@ export function getExdates(component: ICalComponent): ICalDateTime[] {
   return out;
 }
 
-// Replaces all EXDATE lines with a single one listing every skipped
-// occurrence. `iso` values are converted the same way setDateTime does;
-// mixing allDay and timed exceptions in one call isn't supported since
-// RFC 5545 requires VALUE type consistency within one EXDATE line — call
-// this per-batch if a mix is ever needed.
+// RFC 5545 requires VALUE type consistency within one EXDATE line —
+// mixing allDay and timed exceptions needs separate calls.
 export function setExdates(
   component: ICalComponent,
   isos: string[],
@@ -127,9 +114,7 @@ export function setExdates(
   component.properties["EXDATE"] = [{ value: values.join(","), params }];
 }
 
-// Appends one more skip date to whatever EXDATE already exists, preserving
-// existing params if compatible. Simpler call site for "drop this one
-// occurrence" than reconstructing the full list via setExdates.
+// Simpler than setExdates for "drop this one occurrence" — just appends.
 export function addExdate(
   component: ICalComponent,
   iso: string,
@@ -137,10 +122,12 @@ export function addExdate(
 ): void {
   const existingRaw = getExdates(component).map((d) => d.raw);
   const basic = isoToBasic(iso);
-  if (existingRaw.includes(basic)) return; // already skipped, no-op
+  if (existingRaw.includes(basic)) return;
 
   const params: Record<string, string> = {};
   if (opts.allDay) params.VALUE = "DATE";
   else if (opts.tzid) params.TZID = opts.tzid;
-  component.properties["EXDATE"] = [{ value: [...existingRaw, basic].join(","), params }];
+  component.properties["EXDATE"] = [
+    { value: [...existingRaw, basic].join(","), params },
+  ];
 }
