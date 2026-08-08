@@ -1,15 +1,9 @@
-// Consent screen + code issuance. No grant store: client_id is itself a
-// sealed token (auth.ts), and the code handed back is a sealed, short-lived
-// blob of the credential + PKCE challenge — nothing persisted server-side.
-//
-// The consent screen itself is a Svelte SPA, built separately (see
-// vite.config.ts) into a single static HTML file and pulled in here
-// as raw text via esbuild's .html loader (../build.mts). This module's only
-// UI job is injecting per-request data (client name, hidden OAuth fields)
-// into that static shell — it never touches Svelte's mount shape.
-
+// No grant store: client_id is itself a sealed token, and the code handed
+// back is a sealed, short-lived blob of the credential + PKCE challenge.
 import { seal, open, verifyPkce, TokenError } from "../auth";
-import type { SessionProps } from "../index";
+import type { SessionProps } from "../session/types";
+// Consent UI is a Svelte SPA built separately (vite.config.ts) into one
+// static HTML file, pulled in as raw text via esbuild's .html loader.
 import consentHtml from "./dist/index.html";
 
 interface AuthorizeParams {

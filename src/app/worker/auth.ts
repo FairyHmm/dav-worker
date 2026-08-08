@@ -1,11 +1,5 @@
-// Stateless auth primitive: every token is the payload itself, AES-256-GCM
-// encrypted under TOKEN_KEY. No lookup, anywhere — a token is valid iff it
-// decrypts (and, for tokens that carry one, hasn't passed its expiry).
-// TOKEN_KEY is the operator's own key material, not user data (see
-// Docs/SPEC-STATELESS-AUTH.md) — losing/rotating it invalidates every
-// outstanding token at once; that's the only revocation lever this worker
-// has. Real per-credential revocation is Nextcloud's app-password revoke,
-// which works regardless of token TTL — see spec's Token lifetime section.
+// Stateless: a token is valid iff it decrypts under TOKEN_KEY. No lookup
+// anywhere — see SPEC-STATELESS-AUTH.md for the revocation trade-off.
 
 function toBase64(bytes: Uint8Array): string {
   let bin = "";
