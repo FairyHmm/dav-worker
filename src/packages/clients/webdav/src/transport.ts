@@ -1,11 +1,4 @@
-// Generic authenticated-request transport for WebDAV (and, by extension,
-// CalDAV — CalDAV is WebDAV + REPORT, not a separate transport). Knows
-// nothing about Nextcloud: no username-derived base paths, no credential
-// shape. `host` + `authHeader` are the only inputs, and both are ordinary
-// HTTP/WebDAV concepts any server exposes. Nextcloud-specific base-path
-// construction (`/remote.php/dav/files/{username}`, etc.) belongs in
-// `storage/nextcloud/*`, not here.
-
+// CalDAV is WebDAV + REPORT, not a separate transport — this covers both.
 export class WebDAVHttpError extends Error {
   constructor(
     method: string,
@@ -27,9 +20,8 @@ export interface WebDAVTransport {
   request(method: string, path: string, options?: WebDAVRequestInit): Promise<Response>;
 }
 
-// Bakes `host`/`authHeader` into a closure once per call site (typically
-// once per storage adapter instance), so every subsequent call only needs
-// method/path/options — same call shape the old NextcloudBase.request had.
+// host/authHeader are ordinary WebDAV concepts — Nextcloud-specific paths
+// (e.g. /remote.php/dav/files/{username}) belong in storage/nextcloud/*.
 export function createWebDAVTransport(host: string, authHeader: string): WebDAVTransport {
   return {
     async request(method, path, options = {}) {

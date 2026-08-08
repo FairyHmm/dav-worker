@@ -1,11 +1,8 @@
-// Barrel export for the generic WebDAV protocol package. Protocol-scoped,
-// not domain-scoped (SPEC-MONOREPO.md A.2) — nothing here knows about
-// Nextcloud, calendars, or files-as-a-domain-concept.
+// Protocol-scoped only (SPEC-MONOREPO.md A.2) — no Nextcloud/domain knowledge.
+export { createWebDAVTransport, WebDAVHttpError } from "./src/transport.js";
+export type { WebDAVTransport, WebDAVRequestInit } from "./src/transport.js";
 
-export { createWebDAVTransport, WebDAVHttpError } from "./transport.js";
-export type { WebDAVTransport, WebDAVRequestInit } from "./transport.js";
-
-export { davPath, davUrl } from "./url.js";
+export { davPath, davUrl } from "./src/url.js";
 
 export {
   PROPFIND_BODY,
@@ -14,4 +11,4 @@ export {
   mergedProps,
   propOrNull,
   decodeMissedNumericEntities,
-} from "./xml.js";
+} from "./src/xml.js";
