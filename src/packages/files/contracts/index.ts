@@ -1,10 +1,5 @@
-// FileStorage is the contract `files/tools/*` codes against — implemented
-// by `storage/nextcloud/webdav.ts` today, satisfiable by any future
-// backend (e.g. a local-fs MCP) without `files/*` importing anything
-// Nextcloud-specific. Shape mirrors the existing WebDAVClient surface
-// (src/clients/webdav/index.ts) since that's the behavior already proven
-// against SPEC-FILES.md/SPEC-LOCATIONS.md — this contract doesn't invent
-// new semantics, it just names the existing ones.
+// Storage contract for file tools. Backend-agnostic — mirrors WebDAVClient
+// surface but doesn't assume Nextcloud.
 
 export interface FileEntry {
   name: string;

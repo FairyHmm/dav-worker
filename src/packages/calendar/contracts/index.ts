@@ -1,11 +1,5 @@
-// CalendarStorage is the contract `calendar/tools/*` codes against —
-// implemented by `storage/nextcloud/caldav.ts` today. Mirrors the existing
-// CalDAVClient surface (src/clients/caldav/index.ts): list/create/update/
-// delete/findByUid against the status-code contract settled in
-// SPEC-SCHEDULES.md (unconditional writes, idempotent delete, UID-not-found
-// as a plain Error). `free`/free-busy stays out of this contract on
-// purpose — it's business logic (inverting a time-range query against a
-// window) that belongs in `calendar/tools/`, not the storage layer.
+// Storage contract for calendar tools. Mirrors CalDAVClient surface.
+// Free/busy stays out — that's business logic in calendar/tools.
 
 export type ComponentType = "VEVENT" | "VTODO";
 
@@ -44,8 +38,7 @@ export interface CalendarStorage {
     uid: string,
   ): Promise<void>;
 
-  // Travel buffers (SPEC-SCHEDULES.md) are tagged with a custom
-  // X-DAV-WORKER-TRAVEL-FOR property pointing at the parent event's UID.
+  // Travel buffers are tagged with X-DAV-WORKER-TRAVEL-FOR pointing at parent UID.
   findTravelBuffersFor(
     calendarName: string,
     parentUid: string,
