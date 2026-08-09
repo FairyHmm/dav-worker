@@ -1,8 +1,11 @@
 {
   "name": "@dav-worker/time-utils",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Datetime conversion and timezone helpers",
   "type": "module",
   "main": "./index.ts",
-  "types": "./index.ts"
+  "types": "./index.ts",
+  "files": ["dist"]
 }

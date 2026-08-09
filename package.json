@@ -2,6 +2,9 @@
   "name": "dav-worker",
   "version": "0.1.0",
   "private": true,
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Cloudflare Worker exposing an MCP server backed by Nextcloud — files, calendar, and tasks",
   "packageManager": "pnpm@11.5.1",
   "engines": {
     "node": ">=20"

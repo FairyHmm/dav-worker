@@ -1,7 +1,10 @@
 {
   "name": "@dav-worker/ui-shared",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Shared UI components and utilities",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",

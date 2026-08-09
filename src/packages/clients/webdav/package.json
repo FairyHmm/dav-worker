@@ -1,10 +1,13 @@
 {
   "name": "@dav-worker/clients-webdav",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "WebDAV HTTP transport client",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
+  "files": ["dist"],
   "dependencies": {
     "fast-xml-parser": "^5.10.1"
   }

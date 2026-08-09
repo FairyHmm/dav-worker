@@ -1,7 +1,10 @@
 {
   "name": "@dav-worker/auth-upstream",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Upstream authentication token sealing",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts"

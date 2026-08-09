@@ -1,7 +1,10 @@
 {
   "name": "@dav-worker/files-types",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Shared file type definitions",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",

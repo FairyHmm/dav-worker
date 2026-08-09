@@ -1,10 +1,13 @@
 {
   "name": "@dav-worker/files-parser",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Markdown heading and line-range extraction",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
+  "files": ["dist"],
   "dependencies": {
     "mdast-util-to-string": "^4.0.0",
     "remark-frontmatter": "^5.0.0",

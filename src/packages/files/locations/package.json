@@ -1,10 +1,13 @@
 {
   "name": "@dav-worker/files-locations",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Path alias resolution and pattern matching",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
+  "files": ["dist"],
   "dependencies": {
     "smol-toml": "^1.7.1"
   }

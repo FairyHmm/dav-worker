@@ -1,10 +1,13 @@
 {
   "name": "@dav-worker/batch-core",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Batching and retry logic for outbound requests",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
+  "files": ["dist"],
   "dependencies": {
     "zod": "^4.4.3"
   }

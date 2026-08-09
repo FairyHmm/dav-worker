@@ -1,8 +1,11 @@
 {
   "name": "@dav-worker/calendar-ical",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "iCalendar parser (RFC 5545)",
   "type": "module",
   "main": "./index.ts",
-  "types": "./index.ts"
+  "types": "./index.ts",
+  "files": ["dist"]
 }

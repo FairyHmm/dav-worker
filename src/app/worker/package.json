@@ -1,7 +1,10 @@
 {
   "name": "@dav-worker/app-worker",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Cloudflare Worker: OAuth + consent screen + MCP endpoint",
   "type": "module",
   "main": "./index.ts",
   "scripts": {

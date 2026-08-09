@@ -1,9 +1,13 @@
 {
   "name": "@dav-worker/worker-trim",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Cloudflare Worker bundle optimization",
   "type": "module",
   "main": "./index.ts",
+  "types": "./index.ts",
+  "files": ["dist"],
   "dependencies": {},
   "peerDependencies": {
     "esbuild": "*"
