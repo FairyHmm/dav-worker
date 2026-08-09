@@ -2,6 +2,10 @@
   "name": "dav-worker",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.5.1",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build:worker": "pnpm -F @dav-worker/app-worker build",
     "deploy": "pnpm -F @dav-worker/app-worker deploy",
