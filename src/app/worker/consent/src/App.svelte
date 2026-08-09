@@ -1,100 +1,80 @@
 <script lang="ts">
   import "./types";
-  import { Card, Input, Label, Button } from "@dav-worker/ui-shared";
-  import type { ConsentField } from "./types";
-
-  const html = (strings: TemplateStringsArray, ...values: unknown[]) =>
-    strings.reduce((out, s, i) => out + s + (values[i] ?? ""), "");
+  import { Card, Button } from "@dav-worker/ui-shared";
+  import { User, Settings } from "@lucide/svelte";
+  import ConsentHeader from "./ConsentHeader.svelte";
+  import FieldGroup from "./FieldGroup.svelte";
+  import { createFields, CONNECTION_FIELD_COUNT } from "./fields";
 
   const data = window.__CONSENT__;
+  const fields = $state(createFields(data.defaultConfigPath));
 
-  const fields = $state<ConsentField[]>([
-    {
-      label: "Nextcloud host",
-      type: "url",
-      name: "host",
-      placeholder: "https://cloud.example.com",
-      value: "",
-      required: true,
-    },
-    {
-      label: "Username",
-      type: "text",
-      name: "username",
-      value: "",
-      required: true,
-    },
-    {
-      label: "Password",
-      type: "password",
-      name: "password",
-      value: "",
-      required: true,
-      hint: html`App passwords are recommended over your main account password.`,
-    },
-    {
-      label: "Config path",
-      type: "text",
-      name: "configPath",
-      placeholder: "/.config/dav-worker.conf",
-      value: data.defaultConfigPath,
-      hint: html`Created automatically if missing. TOML-formatted, but
-        <mark>.conf</mark> is recommended since Nextcloud won't open
-        <mark>.toml</mark> files natively in its web UI.`,
-    },
-  ]);
+  // RFC 6749 §4.1.2.1 — a plain link, not a form submit; denial doesn't
+  // touch the worker at all, so there's nothing to POST.
+  const cancelUrl = (() => {
+    const url = new URL(data.redirectUri);
+    url.searchParams.set("error", "access_denied");
+    url.searchParams.set("state", data.state);
+    return url.toString();
+  })();
 </script>
 
 <main class="flex min-h-screen items-center justify-center p-4 max-md:p-6">
-  <Card class="w-[24rem] max-w-full p-6">
-    <h1 class="text-host-lg font-medium leading-snug tracking-tight mb-3">
-      {data.clientName} wants to connect to your Nextcloud
-    </h1>
-    <p class="text-host-xs text-host-text-secondary leading-relaxed mt-1 mb-0">
-      Nothing you enter here is stored on the server. Your Nextcloud credential
-      and config path travel only inside your client's own encrypted access
-      token.
+  <Card class="w-[44rem] max-w-full p-8">
+    <ConsentHeader clientName={data.clientName} logoUri={data.logoUri} />
+
+    <p
+      class="text-host-sm text-host-text-secondary leading-relaxed mt-1 mb-0 text-center"
+    >
+      {data.clientName} will have full access to your Nextcloud account. Your credentials
+      are encrypted and never stored by dav-worker.
     </p>
 
-    <form method="POST" class="mt-8 flex flex-col gap-5">
+    <form method="POST" class="mt-8 flex flex-col gap-6">
       <input type="hidden" name="clientId" value={data.clientId} />
       <input type="hidden" name="redirectUri" value={data.redirectUri} />
       <input type="hidden" name="state" value={data.state} />
       <input type="hidden" name="codeChallenge" value={data.codeChallenge} />
 
-      {#each fields as field}
-        <div class="flex flex-col gap-1">
-          <Label for={field.name}>{field.label}</Label>
-          <Input
-            type={field.type}
-            name={field.name}
-            placeholder={field.placeholder}
-            bind:value={field.value}
-            required={field.required}
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+        <FieldGroup
+          icon={User}
+          title="Connection"
+          description="Your Nextcloud account details."
+          fields={fields.slice(0, CONNECTION_FIELD_COUNT)}
+        />
+        <div class="md:border-l md:border-host-border-secondary md:pl-8">
+          <FieldGroup
+            icon={Settings}
+            title="Configuration"
+            description="Where dav-worker stores its config."
+            fields={fields.slice(CONNECTION_FIELD_COUNT)}
           />
-          {#if field.hint}
-            <p
-              class="text-host-xs text-host-text-secondary leading-relaxed mt-1 mb-0"
-            >
-              {@html field.hint}
-            </p>
-          {/if}
         </div>
-      {/each}
+      </div>
 
-      <Button type="submit" class="mt-2 self-start">Connect</Button>
+      <div
+        class="flex justify-end gap-3 border-t border-host-border-secondary pt-6"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          onclick={() => (window.location.href = cancelUrl)}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          class="bg-host-accent-strong text-white hover:bg-host-accent"
+        >
+          Connect
+        </Button>
+      </div>
     </form>
   </Card>
 </main>
 
 <style>
-  p :global(mark) {
-    background: var(--color-host-warning-bg);
-    color: var(--color-host-warning-text);
-    border-radius: var(--radius-host-xs);
-    padding: 0 0.2em;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

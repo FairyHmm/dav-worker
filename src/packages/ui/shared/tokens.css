@@ -58,6 +58,16 @@
   --color-host-info-bg: var(--color-background-info, #dbeafe);
   --color-host-info-text: var(--color-text-info, #1e40af);
 
+  --color-host-accent: var(--color-accent-primary, #0082c9);
+  --color-host-accent-strong: var(
+    --color-accent-primary-strong,
+    color-mix(in srgb, var(--color-host-accent) 85%, black)
+  );
+  --color-host-accent-bg: var(
+    --color-accent-background,
+    color-mix(in srgb, var(--color-host-accent) 12%, var(--color-host-bg))
+  );
+
   /* Ring stays separate from border so focus is visible either way. */
   --color-host-ring: var(--color-ring-primary, Highlight);
   --color-host-ring-danger: var(--color-ring-danger, #dc2626);
@@ -150,8 +160,8 @@ body {
 
 /* Host ring color/width so focus meets each host's own contrast. */
 :focus-visible {
-  outline: var(--border-width-regular, 2px) solid var(--color-host-ring);
-  outline-offset: 2px;
+  outline: var(--border-width-regular, 1px) solid var(--color-host-ring);
+  outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -17,6 +17,7 @@ interface AuthorizeParams {
 interface ClientRegistration {
   redirect_uris: string[];
   client_name?: string;
+  logo_uri?: string;
 }
 
 interface CodePayload {
@@ -126,6 +127,7 @@ function renderConsentPage(
     state: params.state,
     codeChallenge: params.codeChallenge,
     defaultConfigPath: DEFAULT_CONFIG_PATH,
+    logoUri: registration.logo_uri,
   };
 
   const script = `<script>window.__CONSENT__=${escapeForInlineScript(JSON.stringify(data))}</script>`;

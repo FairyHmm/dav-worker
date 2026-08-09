@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1",
+    "@lucide/svelte": "^1.29.0",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/config-parser": "workspace:*",

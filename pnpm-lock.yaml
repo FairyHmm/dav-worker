@@ -87,6 +87,9 @@ importers:
       '@dav-worker/ui-shared':
         specifier: workspace:*
         version: link:../../packages/ui/shared
+      '@lucide/svelte':
+        specifier: ^1.29.0
+        version: 1.29.0(svelte@5.56.8)
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)

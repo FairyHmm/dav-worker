@@ -9,6 +9,17 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+// Self-asserted like client_name — only guards against non-https schemes
+// (javascript:, data:) reaching the <img src> that renders this later.
+function sanitizeLogoUri(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    return new URL(value).protocol === "https:" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // RFC 7591, stateless: client_id itself is the sealed registration.
 export async function handleRegister(
   request: Request,
@@ -17,6 +28,7 @@ export async function handleRegister(
   const body = (await request.json()) as {
     redirect_uris?: string[];
     client_name?: string;
+    logo_uri?: string;
   };
   const redirect_uris = body.redirect_uris ?? [];
   if (redirect_uris.length === 0) {
@@ -28,14 +40,17 @@ export async function handleRegister(
       400,
     );
   }
+  const logo_uri = sanitizeLogoUri(body.logo_uri);
   const client_id = await seal(secret, {
     redirect_uris,
     client_name: body.client_name,
+    logo_uri,
   });
   return jsonResponse({
     client_id,
     redirect_uris,
     client_name: body.client_name,
+    logo_uri,
     token_endpoint_auth_method: "none",
   });
 }
