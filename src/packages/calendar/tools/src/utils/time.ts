@@ -127,9 +127,20 @@ export function resolveTimeWindow(time: TimeWindowInput): {
     };
   }
   if (typeof from === "string" && typeof to === "string") {
+    const fromDate = new Date(`${from}T00:00:00Z`);
+    const toDate = new Date(`${to}T00:00:00Z`);
+    // Regex-shaped doesn't mean calendar-valid (e.g. "2026-02-30") — Date
+    // rolls those over silently instead of throwing, so check explicitly
+    // rather than let a bad window reach the REPORT query as "NaNNaN...".
+    if (Number.isNaN(fromDate.getTime())) {
+      throw new Error(`Cannot parse date value "${from}" as 'YYYY-MM-DD'.`);
+    }
+    if (Number.isNaN(toDate.getTime())) {
+      throw new Error(`Cannot parse date value "${to}" as 'YYYY-MM-DD'.`);
+    }
     return {
-      startUtc: toBasicUtc(new Date(`${from}T00:00:00Z`)),
-      endUtc: toBasicUtc(new Date(`${to}T00:00:00Z`)),
+      startUtc: toBasicUtc(fromDate),
+      endUtc: toBasicUtc(toDate),
     };
   }
 

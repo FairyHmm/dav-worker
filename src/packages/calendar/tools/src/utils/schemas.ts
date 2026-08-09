@@ -83,10 +83,16 @@ export const OccurrenceSchema = DateTimeSchema.optional().describe(
     "identified by its original ISO start. Omit to act on the whole series.",
 );
 
+// A malformed string here doesn't throw in resolveTimeWindow's `new Date(...)`
+// Validating the shape here catches that before it can happen.
+const YyyyMmDdSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected 'YYYY-MM-DD'.");
+
 export const TimeWindowSchema = z
   .union([
     z.object({ from: z.number(), to: z.number() }),
-    z.object({ from: z.string(), to: z.string() }),
+    z.object({ from: YyyyMmDdSchema, to: YyyyMmDdSchema }),
     z.enum(["today", "week", "month"]),
   ])
   .describe(
