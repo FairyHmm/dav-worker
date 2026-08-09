@@ -1,0 +1,68 @@
+import { describe, it, expect } from "vitest";
+import { parseAppConfig } from "./config";
+
+describe("parseAppConfig", () => {
+  it("parses empty string to zero-value config", () => {
+    const config = parseAppConfig("");
+    expect(config.locations).toBeDefined();
+    expect(config.calendars).toBeDefined();
+    expect(config.preferences).toEqual({});
+  });
+
+  it("parses valid full config", () => {
+    const toml = `
+[preferences]
+theme = "dark"
+
+[locations.aliases]
+home = "/remote.php/dav/files/user"
+
+[locations.hosts]
+cloud = ["https://cloud.example"]
+
+[locations.patterns]
+docs = "Documents/.*"
+
+[calendars]
+work = ["work", "#ff0000"]
+`;
+    const config = parseAppConfig(toml);
+    expect(config.preferences.theme).toBe("dark");
+    // hosts expand into aliases
+    expect(config.locations.aliases.home).toBe("/remote.php/dav/files/user");
+    expect(config.locations.aliases["https://cloud.example"]).toBe(
+      "cloud/https://cloud.example",
+    );
+    expect(config.locations.patterns.docs).toBe("Documents/.*");
+    expect(config.calendars.byCategory.get("work")).toEqual({
+      category: "work",
+      slug: "work",
+      color: "#ff0000",
+    });
+  });
+
+  it("throws on invalid TOML", () => {
+    expect(() => parseAppConfig("[1, 2, 3]")).toThrow();
+  });
+
+  it("throws on non-table locations", () => {
+    const toml = `locations = "not a table"`;
+    expect(() => parseAppConfig(toml)).toThrow("[locations] must be a table");
+  });
+
+  it("throws on invalid hosts entry", () => {
+    const toml = `
+[locations]
+hosts = { cloud = "not-array" }
+`;
+    expect(() => parseAppConfig(toml)).toThrow("must be an array of strings");
+  });
+
+  it("throws on invalid calendar entry", () => {
+    const toml = `
+[calendars]
+work = "not-an-array"
+`;
+    expect(() => parseAppConfig(toml)).toThrow("[slug, color] pair");
+  });
+});
