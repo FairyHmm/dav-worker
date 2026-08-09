@@ -1,88 +1,76 @@
 # dav-worker
 
-A Cloudflare Worker exposing a remote MCP server (streamable-http) backed by
-a Nextcloud instance — file (WebDAV) and calendar (CalDAV) tools, callable
-from Claude Desktop, claude.ai, or any MCP client.
+dav-worker is an MCP server for Nextcloud, running on Cloudflare Workers.
 
-No database, no KV, no Durable Objects, no persistent process. Every tool
-call is a fresh outbound request to your Nextcloud instance; auth is fully
-stateless.
+It gives MCP clients access to your Nextcloud files, calendars, and tasks. The hosted server doesn't keep a database or store your Nextcloud data; authentication and access are handled per client session.
 
-## What it does
+## Try it
 
-- **Files** — list, read, write, move, copy, mkdir, delete, stat, outline.
-  Reads/writes support targeting a single Markdown heading block or a raw
-  line range, not just whole-file. Named `location` shortcuts resolve to
-  vault paths so you don't have to type full paths for common places.
-- **Calendar** — list, create, update, delete events; find free/busy slots.
-
-## Architecture
-
-This is a pnpm monorepo. `src/app/*` are the two composition roots (nothing
-else may branch on which one you're in); `src/packages/*/*` are domain
-packages with narrow, platform-agnostic exports.
+Add the following endpoint to your MCP client:
 
 ```
-src/
-├─ app/
-│  ├─ worker/    ← Cloudflare Worker: OAuth + consent screen + /mcp (streamable-http)
-│  └─ local/     ← stdio MCP server for local dev — no OAuth, reads creds from env
-└─ packages/
-   ├─ auth/upstream/        ← the one sanctioned cross-domain dependency
-   ├─ calendar/{contracts,ical,tools}
-   ├─ files/{contracts,locations,parser,tools}
-   ├─ clients/webdav/       ← raw WebDAV transport
-   └─ storage/nextcloud/    ← WebDAV + CalDAV storage built on clients/webdav
+https://dav-worker.fairyhmm.workers.dev/mcp
 ```
 
-Package boundaries are enforced by pnpm workspace deps, not just tree-shaking.
+You'll be asked for your Nextcloud host, username, and app password. After signing in, your client keeps the access token for subsequent requests.
 
-## Auth
+## Features
 
-No `workers-oauth-provider`, no OAUTH_KV, no grant store. Every token
-(client registration, auth code, access token) is a self-contained
-AES-256-GCM sealed blob — valid iff it decrypts. The consent screen at
-`/authorize` collects your Nextcloud host/username/app-password and the
-vault paths to your `locations.toml`/`calendars.toml`, seals them into the
-access token the client holds, and nothing is stored server-side.
+| Category     | Group       | Tools                                        |
+| ------------ | ----------- | -------------------------------------------- |
+| **Files**    | `file_`     | `read`, `write`, `outline`                   |
+|              | `dir_`      | `list`, `create`                             |
+|              | `entry_`    | `copy`, `move`, `delete`, `stat`             |
+| **Calendar** | `schedule_` | `list`, `create`, `update`, `delete`, `free` |
+| **Tasks**    | `list_`     | `all`, `create`, `delete`                    |
+|              | `task_`     | `list`, `create`, `update`, `delete`         |
 
-Access tokens don't expire by design — the real revocation lever is
-rotating a Nextcloud app password (or `TOKEN_KEY`, which invalidates every
-outstanding token at once).
+Files can be read and written at the section level, so changing part of a document doesn't require replacing the whole file. Tools can also batch operations over several items in a single call.
 
-## Setup
+Common locations and calendars can be given short names through a `config.toml` stored on your Nextcloud. A default location is provided during sign-in, and the path can be changed if needed. See the example [`config.toml`](src/app/worker/fixtures/config.toml).
 
-**Deploy (Worker, for use from claude.ai / Claude Desktop remotely):**
+## Self-hosting
+
+dav-worker runs on Cloudflare Workers and can be deployed to your own account:
 
 ```bash
 pnpm install
-wrangler secret put TOKEN_KEY -c src/app/worker/wrangler.jsonc   # random 32+ byte secret
+wrangler secret put TOKEN_KEY -c src/app/worker/wrangler.jsonc
 pnpm deploy
 ```
 
-Then in your MCP client, add the deployed `/mcp` URL and go through the
-`/authorize` consent screen once — no other configuration needed.
+Then add your deployed `/mcp` endpoint to your MCP client.
 
-**Local dev (stdio, no OAuth):**
+## Local development
+
+The repository also includes a local stdio server for development. It doesn't use OAuth:
 
 ```bash
 cd src/app/local
-cp .dev.vars.example .dev.vars   # fill in NEXTCLOUD_HOST / _USERNAME / _PASSWORD
+cp .dev.vars.example .dev.vars
 pnpm install
 pnpm start
 ```
 
-Without `LOCATIONS_CONFIG_PATH` / `CALENDARS_CONFIG_PATH` set, it falls back
-to the bundled fixtures in `src/app/local/fixtures/` so you can try it
-before setting up real config files on your Nextcloud.
+If `CONFIG_PATH` isn't set, the local server uses the bundled fixture at `src/app/local/fixtures/config.toml`.
+
+## Architecture
+
+The repository is a pnpm monorepo with two server entry points:
+- Cloudflare Worker — remote MCP server with OAuth
+- Local server — stdio MCP server for development
+
+Both use the same domain packages for files, calendars, tasks, batching, storage, authentication, configuration, and related tooling.
+
+Package boundaries are enforced through pnpm workspace dependencies.
 
 ## Development
 
 ```bash
 pnpm type-check   # tsc --noEmit
-pnpm lint:fix      # oxlint --fix
+pnpm lint:fix     # oxlint --fix
 pnpm format       # oxfmt --write .
+pnpm test         # vitest
 ```
 
-Run `wrangler types -c src/app/worker/wrangler.jsonc ...` after changing
-bindings in `wrangler.jsonc`.
+Run `wrangler types` after changing bindings in `wrangler.jsonc`.

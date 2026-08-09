@@ -1,20 +1,27 @@
-# Bundled default used when the consent screen's config path is left
-# blank. Temporary: once arbitrary per-user config paths are the only
-# supported mode, this file (and the fallback in index.ts) goes away.
+# Bundled default used when the consent screen's config path is left blank.
+
 [preferences]
 
 [locations]
+
+# Named shortcuts for full vault paths — use "vault" or "projects"
+# in tool calls instead of typing "/Obsidian" or "/Obsidian/Projects".
 [locations.aliases]
 vault = "/Obsidian"
 projects = "@vault/Projects"
 
+# Maps an alias to the specific project(s) it should resolve into,
+# e.g. "@projects/OSS" only ever means the dav-worker project here.
 [locations.hosts]
 "@projects/OSS" = ["dav-worker"]
 
+# Wildcard shortcuts that resolve relative to whichever project
+# you're pointing at, e.g. "dav-worker/spec" -> its SPEC.md.
 [locations.patterns]
 "*/spec" = "*/Docs/SPEC.md"
 "*/code" = "*/Code"
 
+# Calendar aliases: name = [Nextcloud calendar ID, display color].
 [calendars]
 work = ["work", "#3B82F6"]
 personal = ["personal", "#22C55E"]
