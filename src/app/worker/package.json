@@ -22,6 +22,7 @@
     "@dav-worker/config-parser": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
+    "@dav-worker/mcp-utils": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
     "@dav-worker/task-tools": "workspace:*",
     "@dav-worker/ui-shared": "workspace:*",

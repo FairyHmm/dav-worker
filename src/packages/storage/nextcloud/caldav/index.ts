@@ -4,18 +4,18 @@
 
 import type { Credential } from "@dav-worker/auth-upstream";
 import type { CalendarStorage } from "@dav-worker/calendar-contracts";
-import { createWebDAVTransport } from "@dav-worker/clients-webdav";
-import { asNextcloudCredential, basicAuthHeader } from "../credential.js";
 import { calendarPath } from "./url.js";
 import { lookupByUid } from "./uid-lookup.js";
 import { timeRangeQueryBody, travelForQueryBody, parseReportResponses } from "./report.js";
-
-const ICAL_CONTENT_TYPE = "text/calendar; charset=utf-8";
+import {
+  ICAL_CONTENT_TYPE,
+  calDAVBasePath,
+  createNextcloudTransport,
+} from "../utils.js";
 
 export function createNextcloudCalDAVStorage(credential: Credential): CalendarStorage {
-  const cred = asNextcloudCredential(credential);
-  const transport = createWebDAVTransport(cred.host, basicAuthHeader(cred));
-  const basePath = `/remote.php/dav/calendars/${cred.username}`;
+  const { transport, cred } = createNextcloudTransport(credential);
+  const basePath = calDAVBasePath(cred.username);
 
   const path = (calendarName: string) => calendarPath(basePath, calendarName);
 

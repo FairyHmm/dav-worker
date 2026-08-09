@@ -7,3 +7,9 @@ export type { NextcloudCredential } from "./credential.js";
 // errors without a direct dependency on @dav-worker/clients-webdav, which
 // isn't in their declared package.json deps.
 export { WebDAVHttpError } from "@dav-worker/clients-webdav";
+export {
+  ICAL_CONTENT_TYPE,
+  calDAVBasePath,
+  createNextcloudTransport,
+  ensureParentDir,
+} from "./utils.js";

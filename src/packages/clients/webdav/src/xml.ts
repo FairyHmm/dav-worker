@@ -17,6 +17,23 @@ export const xmlParser = new XMLParser({
   removeNSPrefix: true,
 });
 
+// Parsed WebDAV response object.
+export interface ParsedResponse {
+  href: string;
+  propstats: any[];
+}
+
+// Parse a WebDAV multistatus XML response into an array of responses.
+// Handles the common pattern of normalizing single/multi response shapes.
+export function parseResponses(xml: string): ParsedResponse[] {
+  const parsed = xmlParser.parse(xml);
+  const responses: any[] = [].concat(parsed.multistatus?.response ?? []);
+  return responses.map((r: any) => ({
+    href: String(r.href ?? ""),
+    propstats: [].concat(r.propstat ?? []),
+  }));
+}
+
 // `<d:collection/>` parses to `""`, not `true` — check key presence, not truthiness.
 export function isCollection(prop: any): boolean {
   return !!prop?.resourcetype && "collection" in prop.resourcetype;
@@ -40,5 +57,7 @@ export function propOrNull(value: unknown): string | null {
 export function decodeMissedNumericEntities(text: string): string {
   return text
     .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    );
 }

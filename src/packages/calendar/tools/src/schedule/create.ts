@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err } from "../utils";
+import { ok, err } from "@dav-worker/mcp-utils";
 import {
   writeCategorySchema,
   TitleSchema,
@@ -16,7 +16,7 @@ import {
   buildTravelBufferComponent,
   applyRecurrence,
 } from "../utils/mapping";
-import { parseDurationMs, shiftIso } from "../utils/time";
+import { parseDurationMs, shiftIso } from "@dav-worker/time-utils";
 import { wrapInCalendar, stringifyCalendar } from "@dav-worker/calendar-ical";
 import {
   withBatchSupport,

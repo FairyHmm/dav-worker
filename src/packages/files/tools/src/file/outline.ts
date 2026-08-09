@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { FileToolsDeps } from "../deps";
 import { outline } from "@dav-worker/files-parser";
 import { resolveFromExtension } from "@dav-worker/files-types";
-import { ok, err } from "../utils/response";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import { PathSchema, LocationSchema } from "../utils/schemas";
 import {

@@ -11,6 +11,7 @@
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-parser": "workspace:*",
     "@dav-worker/files-types": "workspace:*",
+    "@dav-worker/mcp-utils": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

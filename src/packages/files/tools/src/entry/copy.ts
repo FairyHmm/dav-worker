@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { FileToolsDeps } from "../deps";
-import { ok, err } from "../utils/response";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import {
   PathSchema,

@@ -1,5 +1,5 @@
-// All arithmetic is UTC calendar days — no local-timezone reasoning,
-// no IANA tz database (see ical/component.ts).
+// Shared time utility functions for calendar and task tools.
+// Consolidates duplicated code from calendar/tools and tasks/tools.
 
 function startOfUtcDay(d: Date): Date {
   return new Date(
@@ -29,7 +29,7 @@ function addDays(d: Date, n: number): Date {
   return new Date(d.getTime() + n * 86_400_000);
 }
 
-function toBasicUtc(d: Date): string {
+export function toBasicUtc(d: Date): string {
   return d
     .toISOString()
     .replace(/[-:]/g, "")

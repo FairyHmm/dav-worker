@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { z } from "zod";
 import type { FileToolsDeps } from "../deps";
-import { ok, err } from "../utils/response";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import { combineWholeFile } from "../utils/write-mode";
 import {

@@ -1,10 +1,8 @@
 import type { ZodRawShape, z } from "zod";
 import type { ErrorMode } from "./errorMode.js";
+import type { BatchResult } from "./types.js";
 import { resolveItems, type Resolved } from "./resolveItems.js";
 import { runBatch } from "./runBatch.js";
-
-// Duplicated, not imported, per SPEC-MONOREPO.md A.7.
-type BatchResult = { content: unknown[]; isError?: boolean };
 
 export interface RunBatchToolParams<Shape extends ZodRawShape> {
   items: Partial<z.infer<z.ZodObject<Shape>>>[] | undefined;

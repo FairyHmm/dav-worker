@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err } from "../utils";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { IdSchema, OccurrenceSchema } from "../utils/schemas";
 import { findEventAcrossCalendars, formatWarnings } from "../utils/find";
 import { findMasterEvent, findOccurrenceOverride } from "../utils/mapping";

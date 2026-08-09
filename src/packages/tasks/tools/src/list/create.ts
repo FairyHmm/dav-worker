@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
 import { resolveKnownCategoryColor } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
-import { ok, err } from "../utils";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import { ListNameSchema, ListCategorySchema } from "../utils/schemas";
 import {

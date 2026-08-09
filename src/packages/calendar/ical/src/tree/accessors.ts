@@ -5,7 +5,7 @@ import {
   joinTextList,
   splitTextList,
 } from "./escape";
-import { isoToBasic } from "./datetime";
+import { isoToBasic, nowStamp } from "./datetime";
 
 export function getText(
   component: ICalComponent,
@@ -80,4 +80,11 @@ export function setDateTime(
   if (opts.allDay) params.VALUE = "DATE";
   else if (opts.tzid) params.TZID = opts.tzid;
   component.properties[name] = [{ value: isoToBasic(iso), params }];
+}
+
+// Set DTSTAMP and LAST-MODIFIED to the current time.
+export function stampComponent(component: ICalComponent): void {
+  const stamp = nowStamp();
+  component.properties["DTSTAMP"] = [{ value: stamp, params: {} }];
+  component.properties["LAST-MODIFIED"] = [{ value: stamp, params: {} }];
 }

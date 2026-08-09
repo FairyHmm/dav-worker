@@ -1,10 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
-import { ok, err } from "../utils";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
-import { resolveTimeWindow } from "../utils/time";
+import { resolveTimeWindow } from "@dav-worker/time-utils";
 import { extractEventSummaries } from "../utils/mapping";
 import { formatWarnings } from "../utils/find";
 import type { EventSummary } from "../utils/mapping";

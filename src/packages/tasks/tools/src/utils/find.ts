@@ -1,6 +1,8 @@
 import type { TaskStorage, TaskEntry } from "@dav-worker/task-contracts";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
 
+export { formatWarnings } from "@dav-worker/mcp-utils";
+
 export interface FindTaskResult {
   found: { list: string; entry: TaskEntry } | null;
   // 404'd lists during the search — kept, not swallowed, so "not found"
@@ -14,29 +16,41 @@ function listWarning(list: string): string {
 
 // Lists discovered fresh via storage.listAll() every call — no static
 // config to go stale, unlike calendar's findEventAcrossCalendars.
+// Searches all lists in parallel for better latency.
 export async function findTaskAcrossLists(
   storage: TaskStorage,
   uid: string,
 ): Promise<FindTaskResult> {
-  const warnings: string[] = [];
   const lists = await storage.listAll();
 
-  for (const { slug } of lists) {
-    try {
+  const results = await Promise.allSettled(
+    lists.map(async ({ slug }) => {
       const entry = await storage.findByUid(slug, uid);
-      if (entry) return { found: { list: slug, entry }, warnings };
-    } catch (e) {
-      if (e instanceof WebDAVHttpError && e.status === 404) {
+      return { slug, entry };
+    }),
+  );
+
+  const warnings: string[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    const slug = lists[i].slug;
+    if (result.status === "fulfilled" && result.value.entry) {
+      return {
+        found: { list: result.value.slug, entry: result.value.entry },
+        warnings,
+      };
+    }
+    if (result.status === "rejected") {
+      if (
+        result.reason instanceof WebDAVHttpError &&
+        result.reason.status === 404
+      ) {
         warnings.push(listWarning(slug));
-        continue;
+      } else {
+        throw result.reason;
       }
-      throw e;
     }
   }
-  return { found: null, warnings };
-}
 
-// Shared "⚠️ ..." prefix, same convention as calendar/tools' find.ts.
-export function formatWarnings(warnings: string[]): string {
-  return warnings.length ? `⚠️ ${warnings.join(" ")}\n\n` : "";
+  return { found: null, warnings };
 }

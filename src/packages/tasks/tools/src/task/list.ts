@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err } from "../utils";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import {
   ListSchema,
@@ -12,7 +12,7 @@ import {
 } from "../utils/schemas";
 import { extractTaskSummaries } from "../utils/mapping";
 import type { TaskSummary } from "../utils/mapping";
-import { resolveTimeWindow } from "../utils/time";
+import { resolveTimeWindow } from "@dav-worker/time-utils";
 import { basicToIso } from "@dav-worker/calendar-ical";
 import {
   withBatchSupport,

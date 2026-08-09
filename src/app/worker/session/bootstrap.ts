@@ -21,18 +21,9 @@ import {
   createNextcloudCalDAVStorage,
   createNextcloudCalDAVTaskStorage,
   WebDAVHttpError,
+  ensureParentDir,
 } from "@dav-worker/storage-nextcloud";
 import type { SessionProps } from "./types";
-
-// Parent-dir 404s (e.g. /.config not existing yet) are routine on a fresh
-// account — mkdir treats "already exists" as a non-error itself.
-async function ensureParentDir(
-  path: string,
-  fileStorage: { mkdir(path: string): Promise<unknown> },
-): Promise<void> {
-  const dir = path.slice(0, path.lastIndexOf("/"));
-  if (dir) await fileStorage.mkdir(dir);
-}
 
 async function loadConfig(
   path: string,

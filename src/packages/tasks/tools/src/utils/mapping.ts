@@ -9,9 +9,9 @@ import {
   setDateTime,
   getTextList,
   setTextList,
-  nowStamp,
   findAllComponents,
   basicToIso,
+  stampComponent,
 } from "@dav-worker/calendar-ical";
 
 // Maps request/response field names onto RFC 5545 VTODO properties via
@@ -140,9 +140,7 @@ export function applyTaskFields(
   if (fields.tags !== undefined) applyTagChanges(todo, fields.tags);
   if (fields.url !== undefined) writeUrl(todo, fields.url);
 
-  const stamp = nowStamp();
-  todo.properties["DTSTAMP"] = [{ value: stamp, params: {} }];
-  todo.properties["LAST-MODIFIED"] = [{ value: stamp, params: {} }];
+  stampComponent(todo);
 }
 
 export interface TaskSummary {

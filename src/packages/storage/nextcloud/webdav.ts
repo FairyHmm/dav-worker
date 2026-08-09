@@ -6,30 +6,27 @@
 import type { Credential } from "@dav-worker/auth-upstream";
 import type { FileEntry, FileStorage } from "@dav-worker/files-contracts";
 import {
-  createWebDAVTransport,
   davPath,
   davUrl,
   PROPFIND_BODY,
-  xmlParser,
+  parseResponses,
   isCollection,
   mergedProps,
   propOrNull,
 } from "@dav-worker/clients-webdav";
 import { checkReadable } from "@dav-worker/files-types";
-import { asNextcloudCredential, basicAuthHeader } from "./credential.js";
+import { createNextcloudTransport } from "./utils.js";
 
 export function createNextcloudWebDAVStorage(
   credential: Credential,
 ): FileStorage {
-  const cred = asNextcloudCredential(credential);
-  const transport = createWebDAVTransport(cred.host, basicAuthHeader(cred));
+  const { transport, cred } = createNextcloudTransport(credential);
   const basePath = `/remote.php/dav/files/${cred.username}`;
 
   const path = (p: string) => davPath(basePath, p);
   const url = (p: string) => davUrl(cred.host, basePath, p);
 
-  function parseEntry(r: any, fallbackPath?: string): FileEntry {
-    const href: string = r.href ?? "";
+  function parseEntry(href: string, prop: any, fallbackPath?: string): FileEntry {
     const decodedHref = decodeURIComponent(href.replace(/\/$/, ""));
     const name = decodedHref.split("/").pop() ?? "";
 
@@ -43,7 +40,6 @@ export function createNextcloudWebDAVStorage(
       }
     }
 
-    const prop = mergedProps(r);
     return {
       name,
       path: relPath,
@@ -65,10 +61,8 @@ export function createNextcloudWebDAVStorage(
         body: PROPFIND_BODY,
       });
 
-      const xml = await res.text();
-      const parsed = xmlParser.parse(xml);
-      const responses: any[] = [].concat(parsed.multistatus?.response ?? []);
-      return responses.slice(1).map((r) => parseEntry(r));
+      const responses = parseResponses(await res.text());
+      return responses.slice(1).map((r) => parseEntry(r.href, mergedProps(r)));
     },
 
     async read(p) {
@@ -105,12 +99,10 @@ export function createNextcloudWebDAVStorage(
         headers: { Depth: "0", "Content-Type": "application/xml" },
         body: PROPFIND_BODY,
       });
-      const xml = await res.text();
-      const parsed = xmlParser.parse(xml);
-      const responses: any[] = [].concat(parsed.multistatus?.response ?? []);
+      const responses = parseResponses(await res.text());
       const r = responses[0];
       if (!r) throw new Error(`No stat response for: ${p}`);
-      return parseEntry(r, p);
+      return parseEntry(r.href, mergedProps(r), p);
     },
 
     async copy(src, dst, force) {

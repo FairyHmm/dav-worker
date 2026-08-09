@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err } from "../utils";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { z } from "zod";
 import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
@@ -9,7 +9,7 @@ import {
   parseDurationMs,
   basicUtcToDate,
   dateToBasicUtc,
-} from "../utils/time";
+} from "@dav-worker/time-utils";
 import { extractEventSummaries } from "../utils/mapping";
 import {
   withBatchSupport,

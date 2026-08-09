@@ -9,7 +9,9 @@
     "@dav-worker/batch-core": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/clients-webdav": "workspace:*",
+    "@dav-worker/mcp-utils": "workspace:*",
     "@dav-worker/task-contracts": "workspace:*",
+    "@dav-worker/time-utils": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

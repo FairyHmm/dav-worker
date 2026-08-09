@@ -24,6 +24,7 @@ export {
   setTextList,
   getDateTime,
   setDateTime,
+  stampComponent,
 } from "./src/tree/accessors";
 export { isoToBasic, basicToIso, nowStamp } from "./src/tree/datetime";
 

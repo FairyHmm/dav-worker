@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err } from "../utils";
+import { ok, err } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import { TaskTitleSchema, ListSchema, EventIdSchema } from "../utils/schemas";
 import { buildTaskComponent, linkTaskToEvent } from "../utils/mapping";

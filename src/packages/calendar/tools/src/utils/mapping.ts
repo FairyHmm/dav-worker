@@ -8,12 +8,12 @@ import {
   getDateTime,
   setDateTime,
   removeProperty,
-  nowStamp,
   findAllComponents,
   cloneComponent,
   isoToBasic,
   basicToIso,
   setRRule,
+  stampComponent,
 } from "@dav-worker/calendar-ical";
 
 // Maps dav-worker's field names onto RFC 5545 VEVENT properties. Kept out
@@ -65,9 +65,7 @@ export function applyEventFields(
   if (fields.start !== undefined) setDateTime(event, "DTSTART", fields.start);
   if (fields.end !== undefined) setDateTime(event, "DTEND", fields.end);
 
-  const stamp = nowStamp();
-  event.properties["DTSTAMP"] = [{ value: stamp, params: {} }];
-  event.properties["LAST-MODIFIED"] = [{ value: stamp, params: {} }];
+  stampComponent(event);
 }
 
 // `until`, if given, is ISO like the rest of dav-worker's schema —

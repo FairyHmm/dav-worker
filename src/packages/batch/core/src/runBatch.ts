@@ -1,7 +1,5 @@
 import type { ErrorMode } from "./errorMode.js";
-
-// Structural, not imported, per SPEC-MONOREPO.md A.7.
-type BatchResult = { content: unknown[]; isError?: boolean };
+import type { BatchResult } from "./types.js";
 
 // fn always reports its own next state (TState defaults to undefined for
 // stateless callers) so the loop stays one shape, not a stateful/stateless branch.

@@ -11,14 +11,13 @@ import type { Credential } from "@dav-worker/auth-upstream";
 import type { TaskStorage, TaskEntry } from "@dav-worker/task-contracts";
 import { parseCalendar, findComponent, getText } from "@dav-worker/calendar-ical";
 import {
-  createWebDAVTransport,
-  xmlParser,
+  parseResponses,
   isCollection,
   mergedProps,
   propOrNull,
   WebDAVHttpError,
+  type WebDAVTransport,
 } from "@dav-worker/clients-webdav";
-import { asNextcloudCredential, basicAuthHeader } from "../credential.js";
 import { calendarPath } from "./url.js";
 import { lookupByUid } from "./uid-lookup.js";
 import {
@@ -29,8 +28,11 @@ import {
   isDeletedCalendar,
   xmlEscape,
 } from "./report.js";
-
-const ICAL_CONTENT_TYPE = "text/calendar; charset=utf-8";
+import {
+  ICAL_CONTENT_TYPE,
+  calDAVBasePath,
+  createNextcloudTransport,
+} from "../utils.js";
 
 function uidFromIcs(ics: string | null): string {
   if (!ics) return "";
@@ -43,7 +45,7 @@ function uidFromIcs(ics: string | null): string {
 // instead of MKCOL's ambiguous 405 (identical for "slug is a live list"
 // and "slug is trashed"; see isDeletedCalendar's comment).
 async function collectionState(
-  transport: ReturnType<typeof createWebDAVTransport>,
+  transport: WebDAVTransport,
   collectionPath: string,
 ): Promise<"live" | "trashed" | "absent"> {
   let res;
@@ -57,18 +59,15 @@ async function collectionState(
     return "absent";
   }
   if (res.status === 404) return "absent";
-  const xml = await res.text();
-  const parsed = xmlParser.parse(xml);
-  const responses: any[] = [].concat(parsed.multistatus?.response ?? []);
+  const responses = parseResponses(await res.text());
   const self = responses[0];
   if (!self) return "absent";
   return isDeletedCalendar(mergedProps(self)) ? "trashed" : "live";
 }
 
 export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskStorage {
-  const cred = asNextcloudCredential(credential);
-  const transport = createWebDAVTransport(cred.host, basicAuthHeader(cred));
-  const basePath = `/remote.php/dav/calendars/${cred.username}`;
+  const { transport, cred } = createNextcloudTransport(credential);
+  const basePath = calDAVBasePath(cred.username);
 
   const path = (collectionName: string) => calendarPath(basePath, collectionName);
 
@@ -213,9 +212,7 @@ export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskSt
         body: CALDAV_COLLECTION_PROPFIND_BODY,
       });
 
-      const xml = await res.text();
-      const parsed = xmlParser.parse(xml);
-      const responses: any[] = [].concat(parsed.multistatus?.response ?? []);
+      const responses = parseResponses(await res.text());
 
       return responses
         .slice(1)
@@ -226,7 +223,7 @@ export function createNextcloudCalDAVTaskStorage(credential: Credential): TaskSt
           );
         })
         .map((r) => {
-          const decodedHref = decodeURIComponent(String(r.href ?? "").replace(/\/$/, ""));
+          const decodedHref = decodeURIComponent(r.href.replace(/\/$/, ""));
           const slug = decodedHref.split("/").pop() ?? "";
           const props = mergedProps(r);
           const displayName = propOrNull(props.displayname) ?? slug;
