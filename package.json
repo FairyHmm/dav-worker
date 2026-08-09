@@ -1,6 +1,6 @@
 {
   "name": "dav-worker",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "build:worker": "pnpm -F @dav-worker/app-worker build",
@@ -13,13 +13,17 @@
     "format": "oxfmt --write .",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
     "source-map-explorer": "^2.5.3",
     "tsx": "^4.23.9",
     "typescript": "^6.0.3",
+    "vitest": "^3.2.1",
     "wrangler": "^4.119.0"
   }
 }

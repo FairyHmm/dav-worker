@@ -2,16 +2,10 @@ import { handleRegister, handleToken } from "./oauth/handlers";
 import { wellKnownMetadata, protectedResourceMetadata } from "./oauth/metadata";
 import { handleAuthorize } from "./oauth/consent";
 import { handleMcp } from "./mcp-handler";
+import { jsonResponse } from "@dav-worker/mcp-utils";
 import type { Env } from "./session/types";
 
 export type { SessionProps } from "./session/types";
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}
 
 export default {
   async fetch(

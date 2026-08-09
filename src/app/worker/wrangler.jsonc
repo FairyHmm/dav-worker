@@ -4,7 +4,7 @@
   "name": "dav-worker",
   "main": "dist/index.js",
   "no_bundle": true,
-  "compatibility_date": "2025-03-10",
+  "compatibility_date": "2026-08-09",
   "compatibility_flags": ["nodejs_compat"],
   "rules": [
     { "type": "Text", "globs": ["**/*.toml", "**/*.csv"], "fallthrough": true },

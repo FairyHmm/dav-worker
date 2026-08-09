@@ -1,13 +1,7 @@
 import { seal, TokenError } from "../auth";
 import { exchangeCode } from "./consent";
+import { jsonResponse } from "@dav-worker/mcp-utils";
 import type { SessionProps } from "../session/types";
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}
 
 // Self-asserted like client_name — only guards against non-https schemes
 // (javascript:, data:) reaching the <img src> that renders this later.
