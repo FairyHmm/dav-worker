@@ -1,7 +1,6 @@
 import { parse } from "smol-toml";
 
-// Config shape (Docs/SPEC-LOCATIONS.md). No module-level cache —
-// app/worker's createServer resolves this once per request.
+// No cache — resolved once per request in createServer.
 export interface FilesConfig {
   aliases: Record<string, string>;
   patterns: Record<string, string>;
@@ -13,9 +12,7 @@ export interface RawConfig {
   patterns?: Record<string, string>;
 }
 
-// [hosts] is sugar over [aliases]: a shared parent applied to every name
-// listed under it, e.g. "@projects/OSS" = ["dav-worker"] expands to
-// dav-worker = "@projects/OSS/dav-worker", merged into the same table.
+// Hosts expand to synthetic aliases — parent/name pattern.
 function expandHosts(
   aliases: Record<string, string>,
   hosts: Record<string, string[]>,
@@ -27,8 +24,7 @@ function expandHosts(
   return expanded;
 }
 
-// Split from parseFilesConfig so config/parser can hand in an already
-// smol-toml-parsed [locations] sub-table without re-serializing to TOML.
+// Separate from parseFilesConfig for pre-parsed TOML input.
 export function buildFilesConfig(rawConfig: RawConfig): FilesConfig {
   return {
     aliases: expandHosts(rawConfig.aliases ?? {}, rawConfig.hosts ?? {}),

@@ -1,7 +1,7 @@
-import type { FilesConfig } from "./files.js";
+import type { FilesConfig } from "../config/index.js";
 import { splitSegments, unescape, wildcardIndex } from "./path-segments.js";
 
-// What a pattern's wildcard captured from the input, if it had one.
+// Wildcard capture from input.
 interface Capture {
   value: string;
 }
@@ -13,10 +13,7 @@ export interface PatternMatch {
 
 type MatchAttempt = { matched: false } | { matched: true; capture?: Capture };
 
-// Does `patternKey` match the already-unescaped `inputSegments`? Segment
-// counts must match exactly; at most one segment carries a wildcard, and
-// its capture never crosses a `/` boundary (it comes from within a single
-// input segment only).
+// Exact segment count match; one wildcard per segment max.
 function matchOne(patternKey: string, inputSegments: string[]): MatchAttempt {
   const patternSegments = splitSegments(patternKey);
   if (patternSegments.length !== inputSegments.length) {
@@ -53,10 +50,11 @@ function matchOne(patternKey: string, inputSegments: string[]): MatchAttempt {
   return { matched: true, capture };
 }
 
-// Literal patterns (no `*`) always beat wildcard patterns for the same
-// input shape. Among multiple matches of the same kind, the last one
-// defined in the TOML wins.
-export function findMatchingPattern(config: FilesConfig, inputSegments: string[]): PatternMatch {
+// Literals beat wildcards; last-defined wins.
+export function findMatchingPattern(
+  config: FilesConfig,
+  inputSegments: string[],
+): PatternMatch {
   const { patterns } = config;
 
   let literal: PatternMatch | undefined;
@@ -80,22 +78,7 @@ export function findMatchingPattern(config: FilesConfig, inputSegments: string[]
   return match;
 }
 
-// A pattern's replacement template is written relative to `@projects`
-// implicitly (no per-line `@projects/` prefix). Applying it substitutes
-// the capture (if any) into the template's wildcard segment, then decides
-// the root by looking at the *first* resulting segment — however it got
-// there, whether from a captured wildcard or hardcoded in the template:
-//   - Already starts with `@`: the author wrote an explicit alias root
-//     themselves (e.g. `"journal/all" = "@vault/Personal/Journal"`).
-//     Respected as-is. (Prepending `@projects` here would silently embed
-//     an unexpanded `@alias` mid-path, past where `expandAliases` ever
-//     looks — it only expands a *leading* `@`.)
-//   - Names a known alias (hand-written or host-derived, e.g. a project
-//     registered under `[hosts]`): that alias's own path *replaces* the
-//     implicit root, rather than being prepended after it. Covers both
-//     `dav-worker/spec` (wildcard capture "dav-worker") and a hardcoded
-//     literal pattern like `"dav-worker/code" = "dav-worker/Code/..."`.
-//   - Otherwise: prepend the implicit `@projects` root.
+// Template resolves relative to @projects; first segment decides root.
 export function applyPattern(config: FilesConfig, match: PatternMatch): string {
   const templateSegments = splitSegments(match.replacement);
   const wildcardSegIdx = templateSegments.findIndex(

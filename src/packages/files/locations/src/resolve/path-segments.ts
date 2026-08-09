@@ -1,8 +1,6 @@
-// Shared low-level helpers for the `/`-separated, `\`-escapable string
-// syntax used by both TOML pattern keys and tool-supplied location inputs.
+// Shared helpers for /-separated, \-escapable path syntax.
 
-// Split on `/`, treating `\/` (and any other `\x`) as a literal, unsplit
-// character rather than a separator.
+// Split on /, backslash escapes the next char.
 export function splitSegments(path: string): string[] {
   const segments: string[] = [];
   let current = "";
@@ -22,13 +20,12 @@ export function splitSegments(path: string): string[] {
   return segments;
 }
 
-// Resolve `\/`, `\@`, `\*`, `\\` escapes into their literal characters.
+// Resolve backslash escapes to literals.
 export function unescape(segment: string): string {
   return segment.replace(/\\([/@*\\])/g, "$1");
 }
 
-// Index of the first *unescaped* `*` in a raw (still-escaped) segment, or
-// -1 if the segment has none.
+// Index of first unescaped *, or -1.
 export function wildcardIndex(segment: string): number {
   for (let i = 0; i < segment.length; i++) {
     if (segment[i] === "\\") {

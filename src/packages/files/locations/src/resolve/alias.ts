@@ -1,11 +1,13 @@
-import type { FilesConfig } from "./files.js";
+import type { FilesConfig } from "../config/index.js";
 
 const MAX_ALIAS_DEPTH = 50;
 
-// Expand a symbolic path's leading `@alias` reference, recursively. Only
-// a leading `@` is ever treated as an alias reference — literal paths are
-// never interpreted as aliases (see Docs/SPEC-LOCATIONS.md).
-export function expandAliases(config: FilesConfig, path: string, depth = 0): string {
+// Only leading @ is an alias — literal paths pass through.
+export function expandAliases(
+  config: FilesConfig,
+  path: string,
+  depth = 0,
+): string {
   if (!path.startsWith("@")) return path;
 
   if (depth > MAX_ALIAS_DEPTH) {
