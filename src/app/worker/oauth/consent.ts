@@ -109,11 +109,13 @@ async function handleConsentSubmit(
   return Response.redirect(redirect.toString(), 302);
 }
 
-// JS-string-in-HTML injection, not attribute/text interpolation — only
-// escape needed is closing the </script> the payload sits inside, so a
-// dedicated JSON escape (not escapeHtml's &/</>/") is the correct tool.
+// JS-string-in-HTML injection, not attribute/text interpolation — escape
+// characters that could break out of the JSON string or script context.
 function escapeForInlineScript(json: string): string {
-  return json.replace(/</g, "\\u003c");
+  return json
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
 }
 
 function renderConsentPage(

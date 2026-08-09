@@ -9,12 +9,25 @@ export interface NextcloudCredential {
   password: string;
 }
 
-export function asNextcloudCredential(credential: unknown): NextcloudCredential {
+export function asNextcloudCredential(
+  credential: unknown,
+): NextcloudCredential {
   // Runtime trust boundary: `Credential` arrives as `unknown` from
-  // `auth/upstream`. A real implementation should validate shape here;
-  // deferred until TokenStore has a real backing store to validate against
-  // (see SPEC-MONOREPO.md's "Auth lifecycle" open item).
-  return credential as NextcloudCredential;
+  // `auth/upstream`. Validate shape to fail fast on bad credentials.
+  if (typeof credential !== "object" || credential === null) {
+    throw new Error("Invalid credential: expected an object");
+  }
+  const { host, username, password } = credential as Record<string, unknown>;
+  if (typeof host !== "string" || host === "") {
+    throw new Error("Invalid credential: host is required");
+  }
+  if (typeof username !== "string" || username === "") {
+    throw new Error("Invalid credential: username is required");
+  }
+  if (typeof password !== "string" || password === "") {
+    throw new Error("Invalid credential: password is required");
+  }
+  return { host, username, password };
 }
 
 export function basicAuthHeader(credential: NextcloudCredential): string {
