@@ -4,7 +4,7 @@ import { seal, open, verifyPkce, TokenError } from "../auth";
 import type { SessionProps } from "../session/types";
 // Consent UI is a Svelte SPA built separately (vite.config.ts) into one
 // static HTML file, pulled in as raw text via esbuild's .html loader.
-import consentHtml from "./dist/index.html";
+import consentHtml from "../consent/dist/index.html";
 
 interface AuthorizeParams {
   clientId: string;

@@ -1,6 +1,6 @@
 import { handleRegister, handleToken } from "./oauth/handlers";
 import { wellKnownMetadata, protectedResourceMetadata } from "./oauth/metadata";
-import { handleAuthorize } from "./consent/server";
+import { handleAuthorize } from "./oauth/consent";
 import { handleMcp } from "./mcp-handler";
 import type { Env } from "./session/types";
 

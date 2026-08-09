@@ -1,5 +1,5 @@
 import { seal, TokenError } from "../auth";
-import { exchangeCode } from "../consent/server";
+import { exchangeCode } from "./consent";
 import type { SessionProps } from "../session/types";
 
 function jsonResponse(body: unknown, status = 200): Response {
