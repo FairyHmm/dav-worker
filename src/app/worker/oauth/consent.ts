@@ -132,8 +132,8 @@ function renderConsentPage(
     logoUri: registration.logo_uri,
   };
 
-  const script = `<script>window.__CONSENT__=${escapeForInlineScript(JSON.stringify(data))}</script>`;
-  return consentHtml.replace("<!--consent-data-->", script);
+  const script = `<script id="consent-data">window.__CONSENT__=${escapeForInlineScript(JSON.stringify(data))}</script>`;
+  return consentHtml.replace('<script id="consent-data"></script>', script);
 }
 
 export async function exchangeCode(
