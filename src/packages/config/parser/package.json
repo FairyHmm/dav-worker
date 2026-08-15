@@ -11,6 +11,6 @@
   "dependencies": {
     "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
-    "smol-toml": "^1.7.1"
+    "@decimalturn/toml-patch": "^3.0.2"
   }
 }

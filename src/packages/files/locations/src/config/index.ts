@@ -1,4 +1,4 @@
-import { parse } from "smol-toml";
+import { parse } from "@decimalturn/toml-patch";
 
 // No cache — resolved once per request in createServer.
 export interface FilesConfig {

@@ -1,4 +1,4 @@
-import { parse } from "smol-toml";
+import { parse } from "@decimalturn/toml-patch";
 import {
   buildFilesConfig,
   type FilesConfig,

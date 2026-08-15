@@ -166,9 +166,6 @@ importers:
       '@dav-worker/time-utils':
         specifier: workspace:*
         version: link:../../tooling/time-utils
-      smol-toml:
-        specifier: ^1.7.1
-        version: 1.7.1
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -191,17 +188,17 @@ importers:
       '@dav-worker/files-locations':
         specifier: workspace:*
         version: link:../../files/locations
-      smol-toml:
-        specifier: ^1.7.1
-        version: 1.7.1
+      '@decimalturn/toml-patch':
+        specifier: ^3.0.2
+        version: 3.0.2
 
   src/packages/files/contracts: {}
 
   src/packages/files/locations:
     dependencies:
-      smol-toml:
-        specifier: ^1.7.1
-        version: 1.7.1
+      '@decimalturn/toml-patch':
+        specifier: ^3.0.2
+        version: 3.0.2
 
   src/packages/files/parser:
     dependencies:
@@ -444,6 +441,10 @@ packages:
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
+
+  '@decimalturn/toml-patch@3.0.2':
+    resolution: {integrity: sha512-0qEaybovbKCOTCmOiXj7PgajYsoMhiphka0sjWqT/up5WE9LQF/SRDFcL65CG6IhyyxmKrxjcLROqgDNHMMGWw==}
+    engines: {node: '>=16'}
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -2479,10 +2480,6 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
-  smol-toml@1.7.1:
-    resolution: {integrity: sha512-PPlsspAZ4jbMBu5DMFhfUGDQLu/vrL4SyBROVS37x8ynnVmFIs1VPBz1Co8Xks3TvpIaZXmU85y4DrQ+UyVFoQ==}
-    engines: {node: '>= 18'}
-
   source-map-explorer@2.5.3:
     resolution: {integrity: sha512-qfUGs7UHsOBE5p/lGfQdaAj/5U/GWYBw2imEpD6UQNkqElYonkow8t+HBL1qqIl3CuGZx7n8/CQo4x1HwSHhsg==}
     engines: {node: '>=12'}
@@ -2905,6 +2902,8 @@ snapshots:
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
+
+  '@decimalturn/toml-patch@3.0.2': {}
 
   '@emnapi/runtime@1.11.3':
     dependencies:
@@ -4893,8 +4892,6 @@ snapshots:
       side-channel-weakmap: 1.0.2
 
   siginfo@2.0.0: {}
-
-  smol-toml@1.7.1: {}
 
   source-map-explorer@2.5.3:
     dependencies:
