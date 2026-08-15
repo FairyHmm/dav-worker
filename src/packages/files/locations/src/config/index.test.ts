@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildFilesConfig, parseFilesConfig } from "./index";
+import { buildFilesConfig } from "./index";
 
 describe("buildFilesConfig", () => {
   it("passes through aliases and patterns as-is", () => {
@@ -30,27 +30,6 @@ describe("buildFilesConfig", () => {
 
   it("defaults to empty aliases and patterns", () => {
     const config = buildFilesConfig({});
-    expect(config.aliases).toEqual({});
-    expect(config.patterns).toEqual({});
-  });
-});
-
-describe("parseFilesConfig", () => {
-  it("parses TOML into a FilesConfig", () => {
-    const toml = `
-[aliases]
-home = "/remote.php/dav/files/fairy"
-
-[patterns]
-"Solo/*" = "@home/Solo/*"
-`;
-    const config = parseFilesConfig(toml);
-    expect(config.aliases.home).toBe("/remote.php/dav/files/fairy");
-    expect(config.patterns["Solo/*"]).toBe("@home/Solo/*");
-  });
-
-  it("parses empty string to empty config", () => {
-    const config = parseFilesConfig("");
     expect(config.aliases).toEqual({});
     expect(config.patterns).toEqual({});
   });

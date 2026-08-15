@@ -182,23 +182,13 @@ importers:
 
   src/packages/config/parser:
     dependencies:
-      '@dav-worker/calendar-tools':
-        specifier: workspace:*
-        version: link:../../calendar/tools
-      '@dav-worker/files-locations':
-        specifier: workspace:*
-        version: link:../../files/locations
       '@decimalturn/toml-patch':
         specifier: ^3.0.2
         version: 3.0.2
 
   src/packages/files/contracts: {}
 
-  src/packages/files/locations:
-    dependencies:
-      '@decimalturn/toml-patch':
-        specifier: ^3.0.2
-        version: 3.0.2
+  src/packages/files/locations: {}
 
   src/packages/files/parser:
     dependencies:

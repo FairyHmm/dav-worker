@@ -1,6 +1,6 @@
 {
   "name": "@dav-worker/files-locations",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Fairy",
   "license": "AGPL-3.0-only",
   "description": "Path alias resolution and pattern matching",
@@ -9,8 +9,5 @@
   "types": "./index.ts",
   "files": [
     "dist"
-  ],
-  "dependencies": {
-    "@decimalturn/toml-patch": "^3.0.2"
-  }
+  ]
 }

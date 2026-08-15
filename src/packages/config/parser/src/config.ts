@@ -1,31 +1,26 @@
 import { parse } from "@decimalturn/toml-patch";
-import {
-  buildFilesConfig,
-  type FilesConfig,
-  type RawConfig as RawLocationsSection,
-} from "@dav-worker/files-locations";
-import {
-  parseCalendarConfig,
-  type CalendarConfig,
-  type RawCalendarTable,
-} from "@dav-worker/calendar-tools";
 
-// Single fetch+parse point per SPEC-CONFIG.md's one-file model; both
-// app/worker and app/local call this once per session/request.
+// config/parser only extracts config.toml's sections into raw TOML shapes.
+// Semantic validation is left to domain packages so they own their config.
 export interface AppConfig {
-  // Kept in config.toml's own shape so config_get/config_set can
-  // round-trip a section without reconstructing it from parsed form.
   raw: RawAppConfig;
-  locations: FilesConfig;
-  calendars: CalendarConfig;
-  // No fixed shape yet — passed through unparsed until a tool consumes it.
-  preferences: Record<string, unknown>;
 }
+
+// Not exported so each domain package can define its own validated shape.
+interface LocationsShape {
+  aliases: Record<string, string>;
+  hosts: Record<string, string[]>;
+  patterns: Record<string, string>;
+}
+
+// Per SPEC-CONFIG.md: category = [slug, color]. Color/uniqueness checks
+// belong to calendar/tools, which owns semantic validation.
+type CalendarsShape = Record<string, [string, string]>;
 
 export interface RawAppConfig {
   preferences: Record<string, unknown>;
-  locations: RawLocationsSection;
-  calendars: RawCalendarTable;
+  locations: LocationsShape;
+  calendars: CalendarsShape;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -52,7 +47,7 @@ function stringTable(value: unknown, section: string): Record<string, string> {
   return result;
 }
 
-function parseLocations(value: unknown): RawLocationsSection {
+function parseLocations(value: unknown): LocationsShape {
   const table = recordSection(value, "locations");
   const hostsTable = recordSection(table.hosts, "locations.hosts");
   const hosts: Record<string, string[]> = {};
@@ -74,9 +69,9 @@ function parseLocations(value: unknown): RawLocationsSection {
   };
 }
 
-function parseCalendars(value: unknown): RawCalendarTable {
+function parseCalendars(value: unknown): CalendarsShape {
   const table = recordSection(value, "calendars");
-  const calendars: RawCalendarTable = {};
+  const calendars: CalendarsShape = {};
   for (const [category, entry] of Object.entries(table)) {
     if (
       !Array.isArray(entry) ||
@@ -93,7 +88,7 @@ function parseCalendars(value: unknown): RawCalendarTable {
   return calendars;
 }
 
-// Empty/missing config.toml parses to each section's zero-value, not a throw.
+// An empty or missing config.toml is a valid zero-value, not an error.
 export function parseAppConfig(raw: string): AppConfig {
   const parsed = raw.trim() ? parse(raw) : {};
   if (!isRecord(parsed))
@@ -104,10 +99,5 @@ export function parseAppConfig(raw: string): AppConfig {
     calendars: parseCalendars(parsed.calendars),
   };
 
-  return {
-    raw: rawConfig,
-    locations: buildFilesConfig(rawConfig.locations),
-    calendars: parseCalendarConfig(rawConfig.calendars),
-    preferences: rawConfig.preferences,
-  };
+  return { raw: rawConfig };
 }

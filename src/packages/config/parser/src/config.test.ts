@@ -2,14 +2,18 @@ import { describe, it, expect } from "vitest";
 import { parseAppConfig } from "./config";
 
 describe("parseAppConfig", () => {
-  it("parses empty string to zero-value config", () => {
+  it("parses empty string to zero-value raw config", () => {
     const config = parseAppConfig("");
-    expect(config.locations).toBeDefined();
-    expect(config.calendars).toBeDefined();
-    expect(config.preferences).toEqual({});
+    expect(config.raw.preferences).toEqual({});
+    expect(config.raw.locations).toEqual({
+      aliases: {},
+      hosts: {},
+      patterns: {},
+    });
+    expect(config.raw.calendars).toEqual({});
   });
 
-  it("parses valid full config", () => {
+  it("extracts a valid full config into raw sections", () => {
     const toml = `
 [preferences]
 theme = "dark"
@@ -27,18 +31,13 @@ docs = "Documents/.*"
 work = ["work", "#ff0000"]
 `;
     const config = parseAppConfig(toml);
-    expect(config.preferences.theme).toBe("dark");
-    // hosts expand into aliases
-    expect(config.locations.aliases.home).toBe("/remote.php/dav/files/user");
-    expect(config.locations.aliases["https://cloud.example"]).toBe(
-      "cloud/https://cloud.example",
+    expect(config.raw.preferences.theme).toBe("dark");
+    expect(config.raw.locations.aliases.home).toBe(
+      "/remote.php/dav/files/user",
     );
-    expect(config.locations.patterns.docs).toBe("Documents/.*");
-    expect(config.calendars.byCategory.get("work")).toEqual({
-      category: "work",
-      slug: "work",
-      color: "#ff0000",
-    });
+    expect(config.raw.locations.hosts.cloud).toEqual(["https://cloud.example"]);
+    expect(config.raw.locations.patterns.docs).toBe("Documents/.*");
+    expect(config.raw.calendars.work).toEqual(["work", "#ff0000"]);
   });
 
   it("throws on invalid TOML", () => {

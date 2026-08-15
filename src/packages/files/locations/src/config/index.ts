@@ -1,5 +1,3 @@
-import { parse } from "@decimalturn/toml-patch";
-
 // No cache — resolved once per request in createServer.
 export interface FilesConfig {
   aliases: Record<string, string>;
@@ -24,15 +22,12 @@ function expandHosts(
   return expanded;
 }
 
-// Separate from parseFilesConfig for pre-parsed TOML input.
+// Builds a FilesConfig from already-TOML-parsed input — TOML string
+// parsing itself lives in config/parser, the single config.toml entry
+// point (SPEC-CONFIG.md).
 export function buildFilesConfig(rawConfig: RawConfig): FilesConfig {
   return {
     aliases: expandHosts(rawConfig.aliases ?? {}, rawConfig.hosts ?? {}),
     patterns: rawConfig.patterns ?? {},
   };
-}
-
-export function parseFilesConfig(raw: string): FilesConfig {
-  const rawConfig = parse(raw) as RawConfig;
-  return buildFilesConfig(rawConfig);
 }

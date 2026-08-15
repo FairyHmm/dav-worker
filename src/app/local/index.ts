@@ -5,8 +5,10 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFileTools } from "@dav-worker/files-tools";
+import { buildFilesConfig } from "@dav-worker/files-locations";
 import {
   registerCalendarTools,
+  parseCalendarConfig,
   resolveCategoryColor,
   allCategories,
   findEventAcrossCalendars,
@@ -82,8 +84,9 @@ async function main(): Promise<void> {
     "config.toml",
     fileStorage,
   );
-  const { locations: filesConfig, calendars: calendarConfig } =
-    parseAppConfig(configContent);
+  const { raw } = parseAppConfig(configContent);
+  const filesConfig = buildFilesConfig(raw.locations);
+  const calendarConfig = parseCalendarConfig(raw.calendars);
 
   // Mirrors app/worker/index.ts's resolveEventDue (SPEC-MONOREPO.md A.7).
   const resolveEventDue = async (eventId: string): Promise<string | null> => {

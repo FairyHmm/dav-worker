@@ -1,8 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
 import { registerFileTools } from "@dav-worker/files-tools";
+import { buildFilesConfig } from "@dav-worker/files-locations";
 import {
   registerCalendarTools,
+  parseCalendarConfig,
   resolveCategoryColor,
   allCategories,
   findEventAcrossCalendars,
@@ -57,8 +59,9 @@ export async function createServer(props: SessionProps): Promise<McpServer> {
   const taskStorage = createNextcloudCalDAVTaskStorage(props.credential);
 
   const configContent = await loadConfig(props.configs.path, fileStorage);
-  const { locations: filesConfig, calendars: calendarConfig } =
-    parseAppConfig(configContent);
+  const { raw } = parseAppConfig(configContent);
+  const filesConfig = buildFilesConfig(raw.locations);
+  const calendarConfig = parseCalendarConfig(raw.calendars);
 
   // Sole sanctioned cross-domain edge into calendar data (SPEC-MONOREPO.md
   // A.7): tasks only have a UID, so this searches all calendars for it.
