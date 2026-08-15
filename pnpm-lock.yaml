@@ -38,6 +38,9 @@ importers:
       '@dav-worker/config-parser':
         specifier: workspace:*
         version: link:../../packages/config/parser
+      '@dav-worker/config-tools':
+        specifier: workspace:*
+        version: link:../../packages/config/tools
       '@dav-worker/files-locations':
         specifier: workspace:*
         version: link:../../packages/files/locations
@@ -75,6 +78,9 @@ importers:
       '@dav-worker/config-parser':
         specifier: workspace:*
         version: link:../../packages/config/parser
+      '@dav-worker/config-tools':
+        specifier: workspace:*
+        version: link:../../packages/config/tools
       '@dav-worker/files-locations':
         specifier: workspace:*
         version: link:../../packages/files/locations
@@ -185,6 +191,25 @@ importers:
       '@decimalturn/toml-patch':
         specifier: ^3.0.2
         version: 3.0.2
+
+  src/packages/config/tools:
+    dependencies:
+      '@dav-worker/batch-core':
+        specifier: workspace:*
+        version: link:../../batch/core
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../parser
+      '@dav-worker/mcp-utils':
+        specifier: workspace:*
+        version: link:../../tooling/mcp-utils
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.30.0
+        version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
   src/packages/files/contracts: {}
 

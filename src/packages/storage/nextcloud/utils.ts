@@ -27,6 +27,27 @@ export async function ensureParentDir(
   path: string,
   fileStorage: { mkdir(path: string): Promise<unknown> },
 ): Promise<void> {
-  const dir = path.slice(0, path.lastIndexOf("/"));
+  // For a slashless path, lastIndexOf("/") is -1, and slice(0, -1) would
+  // truncate the last character instead of yielding "" — guard on idx > 0.
+  const idx = path.lastIndexOf("/");
+  const dir = idx > 0 ? path.slice(0, idx) : "";
   if (dir) await fileStorage.mkdir(dir);
+}
+
+// Consumers that only need { read, write } (e.g. config/tools's
+// ConfigStorage) shouldn't have to know write() needs a preceding mkdir.
+export function withParentDirWrite<
+  T extends {
+    read(path: string): Promise<{ content: string }>;
+    write(path: string, content: string): Promise<unknown>;
+    mkdir(path: string): Promise<unknown>;
+  },
+>(storage: T): { read: T["read"]; write: T["write"] } {
+  return {
+    read: storage.read.bind(storage),
+    write: async (path, content) => {
+      await ensureParentDir(path, storage);
+      return storage.write(path, content);
+    },
+  };
 }

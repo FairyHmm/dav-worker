@@ -1,6 +1,6 @@
 {
   "name": "@dav-worker/app-local",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "author": "Fairy",
   "license": "AGPL-3.0-only",
@@ -14,6 +14,7 @@
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/calendar-tools": "workspace:*",
     "@dav-worker/config-parser": "workspace:*",
+    "@dav-worker/config-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",

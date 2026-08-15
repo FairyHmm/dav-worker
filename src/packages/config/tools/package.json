@@ -1,0 +1,20 @@
+{
+  "name": "@dav-worker/config-tools",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "MCP tools for reading and writing session config",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "@dav-worker/batch-core": "workspace:*",
+    "@dav-worker/config-parser": "workspace:*",
+    "@dav-worker/mcp-utils": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  }
+}

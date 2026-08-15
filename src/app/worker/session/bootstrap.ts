@@ -11,6 +11,7 @@ import {
   findMasterEvent,
 } from "@dav-worker/calendar-tools";
 import { registerTaskTools } from "@dav-worker/task-tools";
+import { registerConfigTools } from "@dav-worker/config-tools";
 import { parseAppConfig } from "@dav-worker/config-parser";
 import {
   parseCalendar,
@@ -24,6 +25,7 @@ import {
   createNextcloudCalDAVTaskStorage,
   WebDAVHttpError,
   ensureParentDir,
+  withParentDirWrite,
 } from "@dav-worker/storage-nextcloud";
 import type { SessionProps } from "./types";
 
@@ -97,6 +99,10 @@ export async function createServer(props: SessionProps): Promise<McpServer> {
     resolveEventDue,
     resolveCategoryColor: resolveCategoryColorFn,
     categories: allCategories(calendarConfig),
+  });
+  registerConfigTools(server, {
+    storage: withParentDirWrite(fileStorage),
+    path: props.configs.path,
   });
 
   return server;

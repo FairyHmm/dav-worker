@@ -15,6 +15,7 @@ import {
   findMasterEvent,
 } from "@dav-worker/calendar-tools";
 import { registerTaskTools } from "@dav-worker/task-tools";
+import { registerConfigTools } from "@dav-worker/config-tools";
 import { parseAppConfig } from "@dav-worker/config-parser";
 import {
   parseCalendar,
@@ -28,6 +29,7 @@ import {
   createNextcloudCalDAVTaskStorage,
   WebDAVHttpError,
   ensureParentDir,
+  withParentDirWrite,
 } from "@dav-worker/storage-nextcloud";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -122,6 +124,15 @@ async function main(): Promise<void> {
     resolveCategoryColor: resolveCategoryColorFn,
     categories: allCategories(calendarConfig),
   });
+  // No CONFIG_PATH means configContent came from the bundled fixture, not
+  // a real Nextcloud path — nothing writable to point config_set at.
+  const configPath = process.env.CONFIG_PATH;
+  if (configPath) {
+    registerConfigTools(server, {
+      storage: withParentDirWrite(fileStorage),
+      path: configPath,
+    });
+  }
 
   await server.connect(new StdioServerTransport());
 }

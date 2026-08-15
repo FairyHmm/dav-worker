@@ -12,4 +12,5 @@ export {
   calDAVBasePath,
   createNextcloudTransport,
   ensureParentDir,
+  withParentDirWrite,
 } from "./utils.js";

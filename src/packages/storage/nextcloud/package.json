@@ -1,13 +1,15 @@
 {
   "name": "@dav-worker/storage-nextcloud",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Fairy",
   "license": "AGPL-3.0-only",
   "description": "Nextcloud WebDAV + CalDAV storage backend",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@dav-worker/clients-webdav": "workspace:*",
     "@dav-worker/auth-upstream": "workspace:*",
