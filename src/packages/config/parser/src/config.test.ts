@@ -11,6 +11,7 @@ describe("parseAppConfig", () => {
       patterns: {},
     });
     expect(config.raw.calendars).toEqual({});
+    expect(config.raw.disabled).toEqual({ categories: [], tools: {} });
   });
 
   it("extracts a valid full config into raw sections", () => {
@@ -29,6 +30,10 @@ docs = "Documents/.*"
 
 [calendars]
 work = ["work", "#ff0000"]
+
+[disabled]
+categories = ["tasks"]
+files = ["entry_stat"]
 `;
     const config = parseAppConfig(toml);
     expect(config.raw.preferences.theme).toBe("dark");
@@ -38,6 +43,10 @@ work = ["work", "#ff0000"]
     expect(config.raw.locations.hosts.cloud).toEqual(["https://cloud.example"]);
     expect(config.raw.locations.patterns.docs).toBe("Documents/.*");
     expect(config.raw.calendars.work).toEqual(["work", "#ff0000"]);
+    expect(config.raw.disabled).toEqual({
+      categories: ["tasks"],
+      tools: { files: ["entry_stat"] },
+    });
   });
 
   it("throws on invalid TOML", () => {

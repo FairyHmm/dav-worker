@@ -2,6 +2,7 @@ import { parse } from "@decimalturn/toml-patch";
 import { isRecord, recordSection } from "./common";
 import { parseLocations, type LocationsShape } from "./locations";
 import { parseCalendars, type CalendarsShape } from "./calendars";
+import { parseDisabled, type DisabledShape } from "./disabled";
 
 // config/parser only extracts config.toml's sections into raw TOML shapes.
 // Semantic validation is left to domain packages so they own their config.
@@ -13,6 +14,7 @@ export interface RawAppConfig {
   preferences: Record<string, unknown>;
   locations: LocationsShape;
   calendars: CalendarsShape;
+  disabled: DisabledShape;
 }
 
 // An empty or missing config.toml is a valid zero-value, not an error.
@@ -24,6 +26,7 @@ export function parseAppConfig(raw: string): AppConfig {
     preferences: recordSection(parsed.preferences, "preferences"),
     locations: parseLocations(parsed.locations),
     calendars: parseCalendars(parsed.calendars),
+    disabled: parseDisabled(parsed.disabled),
   };
 
   return { raw: rawConfig };
