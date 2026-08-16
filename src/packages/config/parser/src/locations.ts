@@ -1,6 +1,7 @@
 import { recordSection, stringTable } from "./common";
 
-// Internal to this package so files/locations owns its validated shape.
+// Shared with ui/config via the barrel export; files/locations owns the
+// semantic handling of this validated shape.
 export interface LocationsShape {
   aliases: Record<string, string>;
   hosts: Record<string, string[]>;

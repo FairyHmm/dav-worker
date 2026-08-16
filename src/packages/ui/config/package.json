@@ -13,6 +13,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@dav-worker/config-parser": "workspace:*",
     "@dav-worker/ui-shared": "workspace:*",
     "@lucide/svelte": "^1.29.0",
     "svelte": "^5.56.8"

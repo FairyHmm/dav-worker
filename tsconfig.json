@@ -32,5 +32,5 @@
   ],
   // Browser-side Svelte source (DOM lib, vite/client types) — has its own
   // tsconfig.json extending tsconfig.base.json, same as ui/file-explorer.
-  "exclude": ["src/app/worker/consent/**"],
+  "exclude": ["src/app/worker/consent/**", "src/packages/ui/**"],
 }

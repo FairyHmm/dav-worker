@@ -17,6 +17,29 @@ export interface RawAppConfig {
   disabled: DisabledShape;
 }
 
+// Canonical config sections — single source of truth for the sections the
+// config_get/config_set tools accept and the config UI loads/edits.
+// preferences is not surfaced in the UI yet but is planned to be.
+export const CONFIG_SECTIONS = [
+  "preferences",
+  "locations",
+  "calendars",
+  "disabled",
+] as const;
+export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
+export type ConfigSections = Pick<RawAppConfig, ConfigSection>;
+
+// Fresh zero-value sections. A factory rather than a constant so callers
+// (e.g. reactive UI state) get a private copy they can mutate safely.
+export function createEmptySections(): ConfigSections {
+  return {
+    preferences: {},
+    locations: { aliases: {}, hosts: {}, patterns: {} },
+    calendars: {},
+    disabled: { categories: [], tools: {} },
+  };
+}
+
 // An empty or missing config.toml is a valid zero-value, not an error.
 export function parseAppConfig(raw: string): AppConfig {
   const parsed = raw.trim() ? parse(raw) : {};

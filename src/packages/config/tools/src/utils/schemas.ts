@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { CONFIG_SECTIONS } from "@dav-worker/config-parser";
 
 export const SectionSchema = z
-  .enum(["preferences", "locations", "calendars", "disabled"])
+  .enum(CONFIG_SECTIONS)
   .describe("Which top-level config.toml section to target.");
 
 export const ValueSchema = z

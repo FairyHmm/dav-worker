@@ -363,6 +363,9 @@ importers:
 
   src/packages/ui/config:
     dependencies:
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../config/parser
       '@dav-worker/ui-shared':
         specifier: workspace:*
         version: link:../shared
