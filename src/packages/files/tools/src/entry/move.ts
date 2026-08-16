@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { FileToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import {
   PathSchema,
@@ -8,12 +8,8 @@ import {
   ForceSchema,
   formatConflict,
 } from "../utils/schemas";
-import {
-  withBatchSupport,
-  runBatchTool,
-  locked,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { locked, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -27,10 +23,15 @@ function createItemShape() {
 
 type MoveItem = Resolved<ReturnType<typeof createItemShape>, never>;
 
-export function registerMoveTool(server: McpServer, deps: FileToolsDeps): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+export function registerEntryMoveTool(
+  server: McpServer,
+  deps: FileToolsDeps,
+  disabled: DisabledShape,
+): void {
+  defineTool(
+    server,
+    "files",
+    disabled,
     "entry_move",
     {
       description: "Move or rename a file or directory.",
@@ -41,15 +42,9 @@ export function registerMoveTool(server: McpServer, deps: FileToolsDeps): void {
         idempotentHint: false,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: MoveItem) =>
-        moveEntryItem(deps, item),
-      ),
+    (item: MoveItem) => moveEntryItem(deps, item),
   );
 }
 

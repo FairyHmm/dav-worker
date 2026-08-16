@@ -1,15 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { parseAppConfig } from "@dav-worker/config-parser";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import type { ConfigToolsDeps } from "../deps";
 import { SectionSchema } from "../utils/schemas";
 import { readConfigContent } from "../utils/read-content";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -22,10 +18,12 @@ type GetItem = Resolved<ReturnType<typeof createItemShape>, "section">;
 export function registerConfigGetTool(
   server: McpServer,
   deps: ConfigToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "config",
+    disabled,
     "config_get",
     {
       description: "Return named section of config.",
@@ -36,15 +34,9 @@ export function registerConfigGetTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: GetItem) =>
-        getConfigSectionItem(deps, item),
-      ),
+    (item: GetItem) => getConfigSectionItem(deps, item),
   );
 }
 

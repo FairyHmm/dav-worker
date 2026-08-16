@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import {
   writeCategorySchema,
   TitleSchema,
@@ -18,13 +18,8 @@ import {
 } from "../utils/mapping";
 import { parseDurationMs, shiftIso } from "@dav-worker/time-utils";
 import { wrapInCalendar, stringifyCalendar } from "@dav-worker/calendar-ical";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  locked,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, locked, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape(deps: CalendarToolsDeps) {
   return {
@@ -49,10 +44,12 @@ type CreateItem = Resolved<
 export function registerScheduleCreateTool(
   server: McpServer,
   deps: CalendarToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape(deps);
-
-  server.registerTool(
+  defineTool(
+    server,
+    "calendar",
+    disabled,
     "schedule_create",
     {
       description: "Create a calendar event.",
@@ -63,15 +60,9 @@ export function registerScheduleCreateTool(
         idempotentHint: false,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(deps),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: CreateItem) =>
-        createEventItem(deps, item),
-      ),
+    (item: CreateItem) => createEventItem(deps, item),
   );
 }
 

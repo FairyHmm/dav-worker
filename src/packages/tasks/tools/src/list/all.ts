@@ -1,13 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
 import { resolveKnownCategoryColor } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { ListCategorySchema } from "../utils/schemas";
-import {
-  withBatchSupport,
-  runBatchTool,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import type { Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   // No required(): an omitted category just means "all lists", same
@@ -20,10 +17,12 @@ type AllItem = Resolved<ReturnType<typeof createItemShape>, never>;
 export function registerListAllTool(
   server: McpServer,
   deps: TaskToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "tasks",
+    disabled,
     "list_all",
     {
       description: "List all existing task lists.",
@@ -34,15 +33,9 @@ export function registerListAllTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: AllItem) =>
-        listAllItem(deps, item),
-      ),
+    (item: AllItem) => listAllItem(deps, item),
   );
 }
 

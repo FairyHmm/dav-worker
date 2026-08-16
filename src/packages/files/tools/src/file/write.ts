@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { z } from "zod";
 import type { FileToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import { combineWholeFile } from "../utils/write-mode";
 import {
@@ -11,13 +11,8 @@ import {
   TargetSchema,
 } from "../utils/schemas";
 import { resolveTarget } from "@dav-worker/files-parser";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  locked,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, locked, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -33,13 +28,15 @@ function createItemShape() {
 
 type WriteItem = Resolved<ReturnType<typeof createItemShape>, "content">;
 
-export function registerWriteTool(
+export function registerFileWriteTool(
   server: McpServer,
   deps: FileToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "files",
+    disabled,
     "file_write",
     {
       description: "Write text content to a file.",
@@ -50,27 +47,18 @@ export function registerWriteTool(
         idempotentHint: false,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(
-        params,
-        itemShape,
-        err,
-        (item: WriteItem, state: Record<string, number>) =>
-          writeFileItem(deps, item, state),
-        {
-          // Per-path line-count delta so far in this batch, so a caller can
-          // plan a batch of raw edits against one original read instead of
-          // hand-adjusting later from/to for each earlier edit.
-          initial: {},
-          didApply: (result: { isError?: boolean } | { content: unknown[] }) =>
-            !("isError" in result && result.isError),
-        },
-      ),
+    (item: WriteItem, state: Record<string, number>) =>
+      writeFileItem(deps, item, state),
+    {
+      // Per-path line-count delta so far in this batch, so a caller can
+      // plan a batch of raw edits against one original read instead of
+      // hand-adjusting later from/to for each earlier edit.
+      initial: {},
+      didApply: (result: { isError?: boolean } | { content: unknown[] }) =>
+        !("isError" in result && result.isError),
+    },
   );
 }
 

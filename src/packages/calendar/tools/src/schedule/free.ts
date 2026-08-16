@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { z } from "zod";
 import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
@@ -11,11 +11,8 @@ import {
   dateToBasicUtc,
 } from "@dav-worker/time-utils";
 import { extractEventSummaries } from "../utils/mapping";
-import {
-  withBatchSupport,
-  runBatchTool,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import type { Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 interface Interval {
   start: Date;
@@ -72,10 +69,12 @@ type FreeItem = Resolved<ReturnType<typeof createItemShape>, never>;
 export function registerScheduleFreeTool(
   server: McpServer,
   deps: CalendarToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape(deps);
-
-  server.registerTool(
+  defineTool(
+    server,
+    "calendar",
+    disabled,
     "schedule_free",
     {
       description:
@@ -88,15 +87,9 @@ export function registerScheduleFreeTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(deps),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: FreeItem) =>
-        findFreeSlotsItem(deps, item),
-      ),
+    (item: FreeItem) => findFreeSlotsItem(deps, item),
   );
 }
 

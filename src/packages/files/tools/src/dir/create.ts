@@ -1,14 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { FileToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import { PathSchema, LocationSchema } from "../utils/schemas";
-import {
-  withBatchSupport,
-  runBatchTool,
-  locked,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { locked, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -20,13 +16,15 @@ function createItemShape() {
 
 type CreateItem = Resolved<ReturnType<typeof createItemShape>, never>;
 
-export function registerCreateFolderTool(
+export function registerDirCreateTool(
   server: McpServer,
   deps: FileToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "files",
+    disabled,
     "dir_create",
     {
       description:
@@ -38,15 +36,9 @@ export function registerCreateFolderTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: CreateItem) =>
-        createDirItem(deps, item),
-      ),
+    (item: CreateItem) => createDirItem(deps, item),
   );
 }
 

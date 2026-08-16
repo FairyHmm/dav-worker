@@ -1,6 +1,6 @@
 {
   "name": "@dav-worker/calendar-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "author": "Fairy",
   "license": "AGPL-3.0-only",
@@ -13,6 +13,7 @@
     "@dav-worker/calendar-contracts": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/clients-webdav": "workspace:*",
+    "@dav-worker/config-parser": "workspace:*",
     "@dav-worker/mcp-utils": "workspace:*",
     "@dav-worker/time-utils": "workspace:*",
     "zod": "^4.4.3"

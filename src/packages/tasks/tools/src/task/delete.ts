@@ -1,14 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { TaskIdSchema } from "../utils/schemas";
 import { findTaskAcrossLists, formatWarnings } from "../utils/find";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -23,10 +19,12 @@ type DeleteItem = Resolved<ReturnType<typeof createItemShape>, "id">;
 export function registerTaskDeleteTool(
   server: McpServer,
   deps: TaskToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "tasks",
+    disabled,
     "task_delete",
     {
       description:
@@ -38,15 +36,9 @@ export function registerTaskDeleteTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: DeleteItem) =>
-        deleteTaskItem(deps, item),
-      ),
+    (item: DeleteItem) => deleteTaskItem(deps, item),
   );
 }
 

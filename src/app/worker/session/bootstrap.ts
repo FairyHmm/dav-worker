@@ -89,21 +89,34 @@ export async function createServer(props: SessionProps): Promise<McpServer> {
   const resolveCategoryColorFn = (category: string): string =>
     resolveCategoryColor(calendarConfig, category);
 
-  registerFileTools(server, { storage: fileStorage, config: filesConfig });
-  registerCalendarTools(server, {
-    storage: calendarStorage,
-    config: calendarConfig,
-  });
-  registerTaskTools(server, {
-    storage: taskStorage,
-    resolveEventDue,
-    resolveCategoryColor: resolveCategoryColorFn,
-    categories: allCategories(calendarConfig),
-  });
-  registerConfigTools(server, {
-    storage: withParentDirWrite(fileStorage),
-    path: props.configs.path,
-  });
+  registerFileTools(
+    server,
+    { storage: fileStorage, config: filesConfig },
+    raw.disabled,
+  );
+  registerCalendarTools(
+    server,
+    { storage: calendarStorage, config: calendarConfig },
+    raw.disabled,
+  );
+  registerTaskTools(
+    server,
+    {
+      storage: taskStorage,
+      resolveEventDue,
+      resolveCategoryColor: resolveCategoryColorFn,
+      categories: allCategories(calendarConfig),
+    },
+    raw.disabled,
+  );
+  registerConfigTools(
+    server,
+    {
+      storage: withParentDirWrite(fileStorage),
+      path: props.configs.path,
+    },
+    raw.disabled,
+  );
 
   return server;
 }

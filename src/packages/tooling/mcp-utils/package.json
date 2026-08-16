@@ -1,11 +1,21 @@
 {
   "name": "@dav-worker/mcp-utils",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Fairy",
   "license": "AGPL-3.0-only",
   "description": "MCP protocol utilities",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
-  "files": ["dist"]
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@dav-worker/batch-core": "workspace:*",
+    "@dav-worker/config-parser": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  }
 }

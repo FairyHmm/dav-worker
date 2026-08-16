@@ -1,17 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import { TaskTitleSchema, ListSchema, EventIdSchema } from "../utils/schemas";
 import { buildTaskComponent, linkTaskToEvent } from "../utils/mapping";
 import { wrapInCalendar, stringifyCalendar } from "@dav-worker/calendar-ical";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  locked,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, locked, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -33,10 +28,12 @@ type CreateItem = Resolved<
 export function registerTaskCreateTool(
   server: McpServer,
   deps: TaskToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "tasks",
+    disabled,
     "task_create",
     {
       description: "Create a task in a task list.",
@@ -47,15 +44,9 @@ export function registerTaskCreateTool(
         idempotentHint: false,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: CreateItem) =>
-        createTaskItem(deps, item),
-      ),
+    (item: CreateItem) => createTaskItem(deps, item),
   );
 }
 

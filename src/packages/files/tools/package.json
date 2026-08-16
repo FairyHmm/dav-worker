@@ -1,6 +1,6 @@
 {
   "name": "@dav-worker/files-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "author": "Fairy",
   "license": "AGPL-3.0-only",
@@ -10,6 +10,7 @@
   "types": "./index.ts",
   "dependencies": {
     "@dav-worker/batch-core": "workspace:*",
+    "@dav-worker/config-parser": "workspace:*",
     "@dav-worker/files-contracts": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-parser": "workspace:*",

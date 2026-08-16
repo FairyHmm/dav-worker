@@ -1,15 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { writeSection } from "@dav-worker/config-parser";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import type { ConfigToolsDeps } from "../deps";
 import { SectionSchema, ValueSchema } from "../utils/schemas";
 import { readConfigContent } from "../utils/read-content";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -26,10 +22,12 @@ type SetItem = Resolved<
 export function registerConfigSetTool(
   server: McpServer,
   deps: ConfigToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "config",
+    disabled,
     "config_set",
     {
       description:
@@ -41,26 +39,17 @@ export function registerConfigSetTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(
-        params,
-        itemShape,
-        err,
-        (item: SetItem, state: { content: string | undefined }) =>
-          setConfigSectionItem(deps, item, state),
-        {
-          // Threaded content string so a batch of section writes accumulates
-          // against each other's result instead of each starting fresh
-          initial: { content: undefined },
-          didApply: (result: { isError?: boolean } | { content: unknown[] }) =>
-            !("isError" in result && result.isError),
-        },
-      ),
+    (item: SetItem, state: { content: string | undefined }) =>
+      setConfigSectionItem(deps, item, state),
+    {
+      // Threaded content string so a batch of section writes accumulates
+      // against each other's result instead of each starting fresh
+      initial: { content: undefined },
+      didApply: (result: { isError?: boolean } | { content: unknown[] }) =>
+        !("isError" in result && result.isError),
+    },
   );
 }
 

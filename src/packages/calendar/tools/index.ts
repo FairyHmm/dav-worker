@@ -1,5 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { DisabledShape } from "@dav-worker/config-parser";
 import type { CalendarToolsDeps } from "./src/deps";
+
 import { registerScheduleListTool } from "./src/schedule/list";
 import { registerScheduleCreateTool } from "./src/schedule/create";
 import { registerScheduleUpdateTool } from "./src/schedule/update";
@@ -32,10 +34,11 @@ export { findMasterEvent } from "./src/utils/mapping";
 export function registerCalendarTools(
   server: McpServer,
   deps: CalendarToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  registerScheduleListTool(server, deps);
-  registerScheduleCreateTool(server, deps);
-  registerScheduleUpdateTool(server, deps);
-  registerScheduleDeleteTool(server, deps);
-  registerScheduleFreeTool(server, deps);
+  registerScheduleListTool(server, deps, disabled);
+  registerScheduleCreateTool(server, deps, disabled);
+  registerScheduleUpdateTool(server, deps, disabled);
+  registerScheduleDeleteTool(server, deps, disabled);
+  registerScheduleFreeTool(server, deps, disabled);
 }

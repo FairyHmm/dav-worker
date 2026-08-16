@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import {
   IdSchema,
   OccurrenceSchema,
@@ -21,12 +21,8 @@ import {
   findAllComponents,
   stringifyCalendar,
 } from "@dav-worker/calendar-ical";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -45,10 +41,12 @@ type UpdateItem = Resolved<ReturnType<typeof createItemShape>, "id">;
 export function registerScheduleUpdateTool(
   server: McpServer,
   deps: CalendarToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "calendar",
+    disabled,
     "schedule_update",
     {
       description:
@@ -60,15 +58,9 @@ export function registerScheduleUpdateTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: UpdateItem) =>
-        updateEventItem(deps, item),
-      ),
+    (item: UpdateItem) => updateEventItem(deps, item),
   );
 }
 

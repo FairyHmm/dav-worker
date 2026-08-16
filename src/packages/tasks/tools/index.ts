@@ -1,5 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { DisabledShape } from "@dav-worker/config-parser";
 import type { TaskToolsDeps } from "./src/deps";
+
 import { registerTaskCreateTool } from "./src/task/create";
 import { registerTaskListTool } from "./src/task/list";
 import { registerTaskUpdateTool } from "./src/task/update";
@@ -13,12 +15,13 @@ export type { TaskToolsDeps } from "./src/deps";
 export function registerTaskTools(
   server: McpServer,
   deps: TaskToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  registerListCreateTool(server, deps);
-  registerListDeleteTool(server, deps);
-  registerListAllTool(server, deps);
-  registerTaskCreateTool(server, deps);
-  registerTaskListTool(server, deps);
-  registerTaskUpdateTool(server, deps);
-  registerTaskDeleteTool(server, deps);
+  registerListCreateTool(server, deps, disabled);
+  registerListDeleteTool(server, deps, disabled);
+  registerListAllTool(server, deps, disabled);
+  registerTaskCreateTool(server, deps, disabled);
+  registerTaskListTool(server, deps, disabled);
+  registerTaskUpdateTool(server, deps, disabled);
+  registerTaskDeleteTool(server, deps, disabled);
 }

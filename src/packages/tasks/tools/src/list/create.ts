@@ -2,15 +2,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
 import { resolveKnownCategoryColor } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import { ListNameSchema, ListCategorySchema } from "../utils/schemas";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape() {
   return {
@@ -24,10 +20,12 @@ type CreateItem = Resolved<ReturnType<typeof createItemShape>, "name">;
 export function registerListCreateTool(
   server: McpServer,
   deps: TaskToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "tasks",
+    disabled,
     "list_create",
     {
       description: "Create a new task list.",
@@ -38,15 +36,9 @@ export function registerListCreateTool(
         idempotentHint: false,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: CreateItem) =>
-        createListItem(deps, item),
-      ),
+    (item: CreateItem) => createListItem(deps, item),
   );
 }
 

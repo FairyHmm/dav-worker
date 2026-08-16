@@ -1,6 +1,6 @@
 {
   "name": "@dav-worker/task-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "author": "Fairy",
   "license": "AGPL-3.0-only",
@@ -12,6 +12,7 @@
     "@dav-worker/batch-core": "workspace:*",
     "@dav-worker/calendar-ical": "workspace:*",
     "@dav-worker/clients-webdav": "workspace:*",
+    "@dav-worker/config-parser": "workspace:*",
     "@dav-worker/mcp-utils": "workspace:*",
     "@dav-worker/task-contracts": "workspace:*",
     "@dav-worker/time-utils": "workspace:*",

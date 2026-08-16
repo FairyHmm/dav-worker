@@ -113,25 +113,38 @@ async function main(): Promise<void> {
     resolveCategoryColor(calendarConfig, category);
 
   const server = new McpServer({ name: "dav-worker-local", version: "0.1.0" });
-  registerFileTools(server, { storage: fileStorage, config: filesConfig });
-  registerCalendarTools(server, {
-    storage: calendarStorage,
-    config: calendarConfig,
-  });
-  registerTaskTools(server, {
-    storage: taskStorage,
-    resolveEventDue,
-    resolveCategoryColor: resolveCategoryColorFn,
-    categories: allCategories(calendarConfig),
-  });
+  registerFileTools(
+    server,
+    { storage: fileStorage, config: filesConfig },
+    raw.disabled,
+  );
+  registerCalendarTools(
+    server,
+    { storage: calendarStorage, config: calendarConfig },
+    raw.disabled,
+  );
+  registerTaskTools(
+    server,
+    {
+      storage: taskStorage,
+      resolveEventDue,
+      resolveCategoryColor: resolveCategoryColorFn,
+      categories: allCategories(calendarConfig),
+    },
+    raw.disabled,
+  );
   // No CONFIG_PATH means configContent came from the bundled fixture, not
   // a real Nextcloud path — nothing writable to point config_set at.
   const configPath = process.env.CONFIG_PATH;
   if (configPath) {
-    registerConfigTools(server, {
-      storage: withParentDirWrite(fileStorage),
-      path: configPath,
-    });
+    registerConfigTools(
+      server,
+      {
+        storage: withParentDirWrite(fileStorage),
+        path: configPath,
+      },
+      raw.disabled,
+    );
   }
 
   await server.connect(new StdioServerTransport());

@@ -166,6 +166,9 @@ importers:
       '@dav-worker/clients-webdav':
         specifier: workspace:*
         version: link:../../clients/webdav
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../config/parser
       '@dav-worker/mcp-utils':
         specifier: workspace:*
         version: link:../../tooling/mcp-utils
@@ -248,6 +251,9 @@ importers:
       '@dav-worker/batch-core':
         specifier: workspace:*
         version: link:../../batch/core
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../config/parser
       '@dav-worker/files-contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -310,6 +316,9 @@ importers:
       '@dav-worker/clients-webdav':
         specifier: workspace:*
         version: link:../../clients/webdav
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../config/parser
       '@dav-worker/mcp-utils':
         specifier: workspace:*
         version: link:../../tooling/mcp-utils
@@ -327,7 +336,21 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
-  src/packages/tooling/mcp-utils: {}
+  src/packages/tooling/mcp-utils:
+    dependencies:
+      '@dav-worker/batch-core':
+        specifier: workspace:*
+        version: link:../../batch/core
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../config/parser
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.30.0
+        version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
   src/packages/tooling/time-utils: {}
 

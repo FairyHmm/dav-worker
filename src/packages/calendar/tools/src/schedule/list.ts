@@ -1,18 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
 import { resolveTimeWindow } from "@dav-worker/time-utils";
 import { extractEventSummaries } from "../utils/mapping";
 import { formatWarnings } from "../utils/find";
 import type { EventSummary } from "../utils/mapping";
-import {
-  withBatchSupport,
-  runBatchTool,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import type { Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 function createItemShape(deps: CalendarToolsDeps) {
   return {
@@ -26,10 +23,12 @@ type ListItem = Resolved<ReturnType<typeof createItemShape>, never>;
 export function registerScheduleListTool(
   server: McpServer,
   deps: CalendarToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape(deps);
-
-  server.registerTool(
+  defineTool(
+    server,
+    "calendar",
+    disabled,
     "schedule_list",
     {
       description: "List calendar events in a time window.",
@@ -40,15 +39,9 @@ export function registerScheduleListTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(deps),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: ListItem) =>
-        listEventItem(deps, item),
-      ),
+    (item: ListItem) => listEventItem(deps, item),
   );
 }
 

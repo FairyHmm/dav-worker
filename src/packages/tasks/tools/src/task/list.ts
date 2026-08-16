@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import {
   ListSchema,
@@ -14,11 +14,8 @@ import { extractTaskSummaries } from "../utils/mapping";
 import type { TaskSummary } from "../utils/mapping";
 import { resolveTimeWindow } from "@dav-worker/time-utils";
 import { basicToIso } from "@dav-worker/calendar-ical";
-import {
-  withBatchSupport,
-  runBatchTool,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import type { Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 // All filters are optional — nothing here is required() the way
 // list_create's `name` is, since an empty item (list_all's own tasks-
@@ -39,10 +36,12 @@ type ListItem = Resolved<ReturnType<typeof createItemShape>, never>;
 export function registerTaskListTool(
   server: McpServer,
   deps: TaskToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "tasks",
+    disabled,
     "task_list",
     {
       description: "List tasks, optionally filtered and sorted.",
@@ -53,15 +52,9 @@ export function registerTaskListTool(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: ListItem) =>
-        listTaskItem(deps, item),
-      ),
+    (item: ListItem) => listTaskItem(deps, item),
   );
 }
 

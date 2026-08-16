@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import {
   TaskIdSchema,
@@ -23,13 +23,8 @@ import {
   findComponent,
   stringifyCalendar,
 } from "@dav-worker/calendar-ical";
-import {
-  withBatchSupport,
-  runBatchTool,
-  required,
-  locked,
-  type Resolved,
-} from "@dav-worker/batch-core";
+import { required, locked, type Resolved } from "@dav-worker/batch-core";
+import type { DisabledShape } from "@dav-worker/config-parser";
 
 // See SPEC-BATCH.md for required()/locked() semantics.
 function createItemShape() {
@@ -50,10 +45,12 @@ type UpdateItem = Resolved<ReturnType<typeof createItemShape>, "id">;
 export function registerTaskUpdateTool(
   server: McpServer,
   deps: TaskToolsDeps,
+  disabled: DisabledShape,
 ): void {
-  const itemShape = createItemShape();
-
-  server.registerTool(
+  defineTool(
+    server,
+    "tasks",
+    disabled,
     "task_update",
     {
       description: "Update a task by id, changing only the fields provided.",
@@ -64,15 +61,9 @@ export function registerTaskUpdateTool(
         idempotentHint: false,
         openWorldHint: true,
       },
-      inputSchema: {
-        ...itemShape,
-        ...withBatchSupport(itemShape),
-      },
+      itemShape: createItemShape(),
     },
-    async (params) =>
-      runBatchTool(params, itemShape, err, (item: UpdateItem) =>
-        updateTaskItem(deps, item),
-      ),
+    (item: UpdateItem) => updateTaskItem(deps, item),
   );
 }
 
