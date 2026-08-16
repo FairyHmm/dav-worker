@@ -10,19 +10,15 @@
     "node": ">=20"
   },
   "scripts": {
-    "build:worker": "pnpm -F @dav-worker/app-worker build",
-    "deploy": "pnpm -F @dav-worker/app-worker deploy",
-    "deploy:dry-run": "pnpm -F @dav-worker/app-worker deploy:dry-run",
-    "analyze": "pnpm -F @dav-worker/app-worker analyze",
-    "dev": "pnpm -F @dav-worker/app-worker dev",
-    "dev:local": "pnpm -F @dav-worker/app-local start",
-    "cf-typegen": "pnpm -F @dav-worker/app-worker cf-typegen",
+    "build": "pnpm -r build",
+    "build:ui": "pnpm --filter \"./src/packages/ui/*\" build",
+    "deploy:worker": "pnpm -F @dav-worker/app-worker deploy",
+    "dry-run:worker": "pnpm -F @dav-worker/app-worker dry-run",
     "format": "oxfmt --write .",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {

@@ -8,14 +8,14 @@
   "type": "module",
   "main": "./index.ts",
   "scripts": {
-    "build": "pnpm run build:consent && tsx build.mts",
+    "build": "pnpm -w run build:ui && pnpm run build:consent && tsx build.mts",
     "build:consent": "vite build --config consent/vite.config.ts",
     "dev": "wrangler dev -c wrangler.jsonc",
     "dev:consent": "vite dev --config consent/vite.config.ts",
     "deploy": "pnpm run build && wrangler deploy -c wrangler.jsonc",
-    "deploy:dry-run": "pnpm run build && wrangler deploy --dry-run --outdir dist -c wrangler.jsonc",
+    "dry-run": "pnpm run build && wrangler deploy --dry-run --outdir dist -c wrangler.jsonc",
     "analyze": "source-map-explorer dist/**/*.js --no-border-checks",
-    "cf-typegen": "wrangler types -c wrangler.jsonc worker-configuration.d.ts"
+    "typegen": "wrangler types -c wrangler.jsonc worker-configuration.d.ts"
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1",
