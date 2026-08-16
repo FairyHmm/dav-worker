@@ -4,33 +4,8 @@
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerFileTools } from "@dav-worker/files-tools";
-import { buildFilesConfig } from "@dav-worker/files-locations";
-import {
-  registerCalendarTools,
-  parseCalendarConfig,
-  resolveCategoryColor,
-  allCategories,
-  findEventAcrossCalendars,
-  findMasterEvent,
-} from "@dav-worker/calendar-tools";
-import { registerTaskTools } from "@dav-worker/task-tools";
-import { registerConfigTools } from "@dav-worker/config-tools";
-import { parseAppConfig } from "@dav-worker/config-parser";
-import {
-  parseCalendar,
-  findAllComponents,
-  getDateTime,
-  basicToIso,
-} from "@dav-worker/calendar-ical";
-import {
-  createNextcloudWebDAVStorage,
-  createNextcloudCalDAVStorage,
-  createNextcloudCalDAVTaskStorage,
-  WebDAVHttpError,
-  ensureParentDir,
-  withParentDirWrite,
-} from "@dav-worker/storage-nextcloud";
+import { assembleServer, loadConfig } from "@dav-worker/server-core";
+import { createNextcloudWebDAVStorage } from "@dav-worker/storage-nextcloud";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -48,105 +23,25 @@ function requireEnv(name: string): string {
   return value;
 }
 
-// Falls back to the bundled fixture if no path is given, so this is
-// runnable before real config files exist on Nextcloud.
-async function loadConfig(
-  envVar: string,
-  fixtureName: string,
-  fileStorage: {
-    read(path: string): Promise<{ content: string }>;
-    write(path: string, content: string): Promise<unknown>;
-    mkdir(path: string): Promise<unknown>;
-  },
-): Promise<string> {
-  const path = process.env[envVar];
-  if (!path) return readFile(join(moduleDir, "fixtures", fixtureName), "utf-8");
-  try {
-    return (await fileStorage.read(path)).content;
-  } catch (err) {
-    if (!(err instanceof WebDAVHttpError && err.status === 404)) throw err;
-  }
-  await ensureParentDir(path, fileStorage);
-  await fileStorage.write(path, "");
-  return "";
-}
-
 async function main(): Promise<void> {
   const credential = {
     host: requireEnv("NEXTCLOUD_HOST"),
     username: requireEnv("NEXTCLOUD_USERNAME"),
     password: requireEnv("NEXTCLOUD_PASSWORD"),
   };
+
+  const configPath = process.env.CONFIG_PATH;
   const fileStorage = createNextcloudWebDAVStorage(credential);
-  const calendarStorage = createNextcloudCalDAVStorage(credential);
-  const taskStorage = createNextcloudCalDAVTaskStorage(credential);
-
   const configContent = await loadConfig(
-    "CONFIG_PATH",
-    "config.toml",
+    configPath,
     fileStorage,
+    // Falls back to the bundled fixture if CONFIG_PATH is unset, so this is
+    // runnable before real config files exist on Nextcloud.
+    () => readFile(join(moduleDir, "fixtures", "config.toml"), "utf-8"),
   );
-  const { raw } = parseAppConfig(configContent);
-  const filesConfig = buildFilesConfig(raw.locations);
-  const calendarConfig = parseCalendarConfig(raw.calendars);
-
-  // Mirrors app/worker/index.ts's resolveEventDue (SPEC-MONOREPO.md A.7).
-  const resolveEventDue = async (eventId: string): Promise<string | null> => {
-    const { found } = await findEventAcrossCalendars(
-      calendarStorage,
-      calendarConfig,
-      "VEVENT",
-      eventId,
-    );
-    if (!found?.entry.calendarData) return null;
-    const cal = parseCalendar(found.entry.calendarData);
-    const events = findAllComponents(cal, "VEVENT");
-    const master = findMasterEvent(events) ?? events[0];
-    if (!master) return null;
-    const dt = getDateTime(master, "DTSTART");
-    if (!dt) return null;
-    return basicToIso(dt.raw);
-  };
-
-  // Mirrors app/worker/index.ts's resolveCategoryColor wiring.
-  const resolveCategoryColorFn = (category: string): string =>
-    resolveCategoryColor(calendarConfig, category);
 
   const server = new McpServer({ name: "dav-worker-local", version: "0.1.0" });
-  registerFileTools(
-    server,
-    { storage: fileStorage, config: filesConfig },
-    raw.disabled,
-  );
-  registerCalendarTools(
-    server,
-    { storage: calendarStorage, config: calendarConfig },
-    raw.disabled,
-  );
-  registerTaskTools(
-    server,
-    {
-      storage: taskStorage,
-      resolveEventDue,
-      resolveCategoryColor: resolveCategoryColorFn,
-      categories: allCategories(calendarConfig),
-    },
-    raw.disabled,
-  );
-  // No CONFIG_PATH means configContent came from the bundled fixture, not
-  // a real Nextcloud path — nothing writable to point config_set at.
-  const configPath = process.env.CONFIG_PATH;
-  if (configPath) {
-    registerConfigTools(
-      server,
-      {
-        storage: withParentDirWrite(fileStorage),
-        path: configPath,
-      },
-      raw.disabled,
-    );
-  }
-
+  await assembleServer(server, credential, configContent, configPath);
   await server.connect(new StdioServerTransport());
 }
 

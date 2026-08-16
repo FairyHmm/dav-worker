@@ -1,6 +1,6 @@
 {
   "name": "@dav-worker/app-local",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "author": "Fairy",
   "license": "AGPL-3.0-only",
@@ -11,14 +11,8 @@
     "start": "node --env-file=.dev.vars --import tsx index.ts"
   },
   "dependencies": {
-    "@dav-worker/calendar-ical": "workspace:*",
-    "@dav-worker/calendar-tools": "workspace:*",
-    "@dav-worker/config-parser": "workspace:*",
-    "@dav-worker/config-tools": "workspace:*",
-    "@dav-worker/files-locations": "workspace:*",
-    "@dav-worker/files-tools": "workspace:*",
+    "@dav-worker/server-core": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
-    "@dav-worker/task-tools": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {

@@ -20,15 +20,9 @@
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1",
     "@lucide/svelte": "^1.29.0",
-    "@dav-worker/calendar-ical": "workspace:*",
-    "@dav-worker/calendar-tools": "workspace:*",
-    "@dav-worker/config-parser": "workspace:*",
-    "@dav-worker/config-tools": "workspace:*",
-    "@dav-worker/files-locations": "workspace:*",
-    "@dav-worker/files-tools": "workspace:*",
     "@dav-worker/mcp-utils": "workspace:*",
+    "@dav-worker/server-core": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
-    "@dav-worker/task-tools": "workspace:*",
     "@dav-worker/ui-shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "svelte": "^5.0.0"

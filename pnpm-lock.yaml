@@ -29,30 +29,12 @@ importers:
 
   src/app/local:
     dependencies:
-      '@dav-worker/calendar-ical':
+      '@dav-worker/server-core':
         specifier: workspace:*
-        version: link:../../packages/calendar/ical
-      '@dav-worker/calendar-tools':
-        specifier: workspace:*
-        version: link:../../packages/calendar/tools
-      '@dav-worker/config-parser':
-        specifier: workspace:*
-        version: link:../../packages/config/parser
-      '@dav-worker/config-tools':
-        specifier: workspace:*
-        version: link:../../packages/config/tools
-      '@dav-worker/files-locations':
-        specifier: workspace:*
-        version: link:../../packages/files/locations
-      '@dav-worker/files-tools':
-        specifier: workspace:*
-        version: link:../../packages/files/tools
+        version: link:../../packages/server/core
       '@dav-worker/storage-nextcloud':
         specifier: workspace:*
         version: link:../../packages/storage/nextcloud
-      '@dav-worker/task-tools':
-        specifier: workspace:*
-        version: link:../../packages/tasks/tools
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -69,33 +51,15 @@ importers:
       '@cfworker/json-schema':
         specifier: ^4.1.1
         version: 4.1.1
-      '@dav-worker/calendar-ical':
-        specifier: workspace:*
-        version: link:../../packages/calendar/ical
-      '@dav-worker/calendar-tools':
-        specifier: workspace:*
-        version: link:../../packages/calendar/tools
-      '@dav-worker/config-parser':
-        specifier: workspace:*
-        version: link:../../packages/config/parser
-      '@dav-worker/config-tools':
-        specifier: workspace:*
-        version: link:../../packages/config/tools
-      '@dav-worker/files-locations':
-        specifier: workspace:*
-        version: link:../../packages/files/locations
-      '@dav-worker/files-tools':
-        specifier: workspace:*
-        version: link:../../packages/files/tools
       '@dav-worker/mcp-utils':
         specifier: workspace:*
         version: link:../../packages/tooling/mcp-utils
+      '@dav-worker/server-core':
+        specifier: workspace:*
+        version: link:../../packages/server/core
       '@dav-worker/storage-nextcloud':
         specifier: workspace:*
         version: link:../../packages/storage/nextcloud
-      '@dav-worker/task-tools':
-        specifier: workspace:*
-        version: link:../../packages/tasks/tools
       '@dav-worker/ui-shared':
         specifier: workspace:*
         version: link:../../packages/ui/shared
@@ -278,6 +242,37 @@ importers:
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
   src/packages/files/types: {}
+
+  src/packages/server/core:
+    dependencies:
+      '@dav-worker/calendar-ical':
+        specifier: workspace:*
+        version: link:../../calendar/ical
+      '@dav-worker/calendar-tools':
+        specifier: workspace:*
+        version: link:../../calendar/tools
+      '@dav-worker/config-parser':
+        specifier: workspace:*
+        version: link:../../config/parser
+      '@dav-worker/config-tools':
+        specifier: workspace:*
+        version: link:../../config/tools
+      '@dav-worker/files-locations':
+        specifier: workspace:*
+        version: link:../../files/locations
+      '@dav-worker/files-tools':
+        specifier: workspace:*
+        version: link:../../files/tools
+      '@dav-worker/storage-nextcloud':
+        specifier: workspace:*
+        version: link:../../storage/nextcloud
+      '@dav-worker/task-tools':
+        specifier: workspace:*
+        version: link:../../tasks/tools
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.30.0
+        version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
 
   src/packages/storage/nextcloud:
     dependencies:
