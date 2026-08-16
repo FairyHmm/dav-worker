@@ -263,12 +263,18 @@ importers:
       '@dav-worker/files-tools':
         specifier: workspace:*
         version: link:../../files/tools
+      '@dav-worker/mcp-utils':
+        specifier: workspace:*
+        version: link:../../tooling/mcp-utils
       '@dav-worker/storage-nextcloud':
         specifier: workspace:*
         version: link:../../storage/nextcloud
       '@dav-worker/task-tools':
         specifier: workspace:*
         version: link:../../tasks/tools
+      '@dav-worker/ui-config':
+        specifier: workspace:*
+        version: link:../../ui/config
     devDependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
@@ -354,6 +360,34 @@ importers:
       esbuild:
         specifier: '*'
         version: 0.28.1
+
+  src/packages/ui/config:
+    dependencies:
+      '@dav-worker/ui-shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@lucide/svelte':
+        specifier: ^1.29.0
+        version: 1.29.0(svelte@5.56.8)
+      svelte:
+        specifier: ^5.56.8
+        version: 5.56.8
+    devDependencies:
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^7.2.0
+        version: 7.2.0(svelte@5.56.8)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.9))
+      '@tailwindcss/vite':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.9))
+      tailwindcss:
+        specifier: ^4.3.3
+        version: 4.3.3
+      vite:
+        specifier: ^8.2.0
+        version: 8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.9)
+      vite-plugin-singlefile:
+        specifier: ^2.3.3
+        version: 2.3.3(rollup@4.62.4)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.9))
 
   src/packages/ui/file-explorer:
     dependencies:

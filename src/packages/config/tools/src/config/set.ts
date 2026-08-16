@@ -39,6 +39,7 @@ export function registerConfigSetTool(
         idempotentHint: true,
         openWorldHint: true,
       },
+      ui: "config",
       itemShape: createItemShape(),
     },
     (item: SetItem, state: { content: string | undefined }) =>

@@ -1,0 +1,27 @@
+{
+  "name": "@dav-worker/ui-config",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Fairy",
+  "license": "AGPL-3.0-only",
+  "description": "Config panel UI component",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@dav-worker/ui-shared": "workspace:*",
+    "@lucide/svelte": "^1.29.0",
+    "svelte": "^5.56.8"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.0",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

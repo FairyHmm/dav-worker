@@ -15,8 +15,10 @@
     "@dav-worker/config-tools": "workspace:*",
     "@dav-worker/files-locations": "workspace:*",
     "@dav-worker/files-tools": "workspace:*",
+    "@dav-worker/mcp-utils": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
-    "@dav-worker/task-tools": "workspace:*"
+    "@dav-worker/task-tools": "workspace:*",
+    "@dav-worker/ui-config": "workspace:*"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0"

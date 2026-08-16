@@ -13,6 +13,8 @@ import { err, ok } from "./response";
 export interface ToolConfig<Shape extends ZodRawShape> {
   description: string;
   annotations: Record<string, unknown>;
+  // MCP Apps resource name — resolved to _meta.ui.resourceUri on registration.
+  ui?: string;
   itemShape: Shape;
 }
 
@@ -74,7 +76,7 @@ export function defineTool<
   },
 ): void {
   if (resolve(category, name, disabled) !== "ENABLED") return;
-  const { description, annotations, itemShape } = config;
+  const { description, annotations, ui, itemShape } = config;
 
   // Type compatibility: handler params must match inputSchema, but SDK
   // conditional types prevent direct matching. Cast to unknown resolves
@@ -106,6 +108,13 @@ export function defineTool<
     {
       description,
       annotations,
+      _meta: {
+        ...(ui && {
+          ui: {
+            resourceUri: `ui://${ui}`,
+          },
+        }),
+      },
       inputSchema: {
         ...itemShape,
         ...withBatchSupport(itemShape),

@@ -34,6 +34,7 @@ export function registerConfigGetTool(
         idempotentHint: true,
         openWorldHint: true,
       },
+      ui: "config",
       itemShape: createItemShape(),
     },
     (item: GetItem) => getConfigSectionItem(deps, item),
