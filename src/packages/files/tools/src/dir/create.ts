@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { FileToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import { PathSchema, LocationSchema } from "../utils/schemas";
 import { locked, type Resolved } from "@dav-worker/batch-core";
@@ -20,6 +20,7 @@ export function registerDirCreateTool(
   server: McpServer,
   deps: FileToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -39,6 +40,8 @@ export function registerDirCreateTool(
       itemShape: createItemShape(),
     },
     (item: CreateItem) => createDirItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

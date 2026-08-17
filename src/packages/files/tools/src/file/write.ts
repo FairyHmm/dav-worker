@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { z } from "zod";
 import type { FileToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import { combineWholeFile } from "../utils/write-mode";
 import {
@@ -32,6 +32,7 @@ export function registerFileWriteTool(
   server: McpServer,
   deps: FileToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -59,6 +60,7 @@ export function registerFileWriteTool(
       didApply: (result: { isError?: boolean } | { content: unknown[] }) =>
         !("isError" in result && result.isError),
     },
+    collector,
   );
 }
 

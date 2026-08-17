@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { TaskIdSchema } from "../utils/schemas";
 import { findTaskAcrossLists, formatWarnings } from "../utils/find";
 import { required, type Resolved } from "@dav-worker/batch-core";
@@ -20,6 +20,7 @@ export function registerTaskDeleteTool(
   server: McpServer,
   deps: TaskToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -39,6 +40,8 @@ export function registerTaskDeleteTool(
       itemShape: createItemShape(),
     },
     (item: DeleteItem) => deleteTaskItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

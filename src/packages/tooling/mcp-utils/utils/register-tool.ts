@@ -21,6 +21,11 @@ export interface ToolConfig<Shape extends ZodRawShape> {
 // ok()/err() return structurally incompatible shapes; the union avoids rejecting valid ok() results.
 export type BatchResult = ReturnType<typeof ok> | ReturnType<typeof err>;
 
+export interface ToolEntry {
+  name: string;
+  category: string;
+}
+
 // Stateless overload: callers can omit state/options when unneeded.
 export function defineTool<
   Shape extends ZodRawShape,
@@ -32,6 +37,8 @@ export function defineTool<
   name: string,
   config: ToolConfig<Shape>,
   fn: (item: Resolved<Shape, RequiredKeys>) => Promise<BatchResult>,
+  options?: undefined,
+  collector?: ToolEntry[],
 ): void;
 // Stateful overload: callers need to thread state across batch items.
 export function defineTool<
@@ -52,6 +59,7 @@ export function defineTool<
     initial: TState;
     didApply: (result: BatchResult) => boolean;
   },
+  collector?: ToolEntry[],
 ): void;
 // Merged overload: accepts either stateless or stateful signatures.
 export function defineTool<
@@ -74,8 +82,10 @@ export function defineTool<
     initial: TState;
     didApply: (result: BatchResult) => boolean;
   },
+  collector?: ToolEntry[],
 ): void {
   if (resolve(category, name, disabled) !== "ENABLED") return;
+  collector?.push({ name, category });
   const { description, annotations, ui, itemShape } = config;
 
   // Type compatibility: handler params must match inputSchema, but SDK

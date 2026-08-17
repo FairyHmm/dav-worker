@@ -3,5 +3,6 @@ export {
   defineTool,
   type ToolConfig,
   type BatchResult,
+  type ToolEntry,
 } from "./utils/register-tool";
 export { defineResource } from "./utils/register-resource";

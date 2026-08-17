@@ -19,6 +19,7 @@ import {
   basicToIso,
 } from "@dav-worker/calendar-ical";
 import { withParentDirWrite } from "@dav-worker/storage-nextcloud";
+import { type ToolEntry } from "@dav-worker/mcp-utils";
 import type { Storages } from "./storage";
 
 export async function registerTools(
@@ -26,7 +27,7 @@ export async function registerTools(
   storages: Storages,
   configContent: string,
   configPath: string | undefined,
-): Promise<void> {
+): Promise<ToolEntry[]> {
   const { raw } = parseAppConfig(configContent);
   const filesConfig = buildFilesConfig(raw.locations);
   const calendarConfig = parseCalendarConfig(raw.calendars);
@@ -52,31 +53,40 @@ export async function registerTools(
     return basicToIso(dt.raw);
   };
 
+  const collector: ToolEntry[] = [];
+
   registerFileTools(
     server,
     { storage: storages.file, config: filesConfig },
     raw.disabled,
+    collector,
   );
   registerCalendarTools(
     server,
     { storage: storages.calendar, config: calendarConfig },
     raw.disabled,
+    collector,
   );
   registerTaskTools(
     server,
     {
       storage: storages.task,
       resolveEventDue,
-      resolveCategoryColor: (category) => resolveCategoryColor(calendarConfig, category),
+      resolveCategoryColor: (category) =>
+        resolveCategoryColor(calendarConfig, category),
       categories: allCategories(calendarConfig),
     },
     raw.disabled,
+    collector,
   );
   if (configPath) {
     registerConfigTools(
       server,
       { storage: withParentDirWrite(storages.file), path: configPath },
       raw.disabled,
+      collector,
     );
   }
+
+  return collector;
 }

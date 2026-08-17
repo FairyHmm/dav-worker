@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { FileToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import {
   PathSchema,
@@ -28,6 +28,7 @@ export function registerEntryCopyTool(
   server: McpServer,
   deps: FileToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -46,6 +47,8 @@ export function registerEntryCopyTool(
       itemShape: createItemShape(),
     },
     (item: CopyItem) => copyEntryItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

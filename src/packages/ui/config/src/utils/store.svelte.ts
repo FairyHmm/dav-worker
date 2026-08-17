@@ -5,12 +5,13 @@ import {
   type ConfigSections,
 } from "@dav-worker/config-parser";
 import { toast } from "@dav-worker/ui-shared";
-import { getSection, setSection } from "./mcp";
+import { getSection, setSection, listTools, type ToolEntry } from "./mcp";
 
 function emptySaved(): Record<ConfigSection, string> {
-  return Object.fromEntries(
-    CONFIG_SECTIONS.map((key) => [key, ""]),
-  ) as Record<ConfigSection, string>;
+  return Object.fromEntries(CONFIG_SECTIONS.map((key) => [key, ""])) as Record<
+    ConfigSection,
+    string
+  >;
 }
 
 class ConfigStore {
@@ -22,6 +23,8 @@ class ConfigStore {
   loading = $state(true);
   loadError = $state<string | null>(null);
   saving = $state(false);
+
+  tools = $state<ToolEntry[]>([]);
 
   get dirty() {
     return CONFIG_SECTIONS.map((key) => ({
@@ -44,13 +47,15 @@ class ConfigStore {
     this.loading = true;
     this.loadError = null;
     try {
-      const values = await Promise.all(
-        CONFIG_SECTIONS.map((key) => getSection(key)),
-      );
+      const [values, tools] = await Promise.all([
+        Promise.all(CONFIG_SECTIONS.map((key) => getSection(key))),
+        Promise.resolve(listTools()),
+      ]);
       const loaded = Object.fromEntries(
         CONFIG_SECTIONS.map((key, i) => [key, values[i]]),
       ) as unknown as ConfigSections;
       this.sections = loaded;
+      this.tools = tools;
       this.snapshot();
     } catch (e) {
       this.loadError = e instanceof Error ? e.message : String(e);

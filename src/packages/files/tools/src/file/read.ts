@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { FileToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";
 import { LocationSchema, PathSchema, TargetSchema } from "../utils/schemas";
 import { resolveTarget } from "@dav-worker/files-parser";
@@ -21,6 +21,7 @@ export function registerFileReadTool(
   server: McpServer,
   deps: FileToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -39,6 +40,8 @@ export function registerFileReadTool(
       itemShape: createItemShape(),
     },
     (item: ReadItem) => readFileItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

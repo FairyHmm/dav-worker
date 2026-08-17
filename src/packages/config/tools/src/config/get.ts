@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { parseAppConfig } from "@dav-worker/config-parser";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import type { ConfigToolsDeps } from "../deps";
 import { SectionSchema } from "../utils/schemas";
 import { readConfigContent } from "../utils/read-content";
@@ -19,6 +19,7 @@ export function registerConfigGetTool(
   server: McpServer,
   deps: ConfigToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -38,6 +39,8 @@ export function registerConfigGetTool(
       itemShape: createItemShape(),
     },
     (item: GetItem) => getConfigSectionItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

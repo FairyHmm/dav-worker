@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { IdSchema, OccurrenceSchema } from "../utils/schemas";
 import { findEventAcrossCalendars, formatWarnings } from "../utils/find";
 import { findMasterEvent, findOccurrenceOverride } from "../utils/mapping";
@@ -26,6 +26,7 @@ export function registerScheduleDeleteTool(
   server: McpServer,
   deps: CalendarToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -46,6 +47,8 @@ export function registerScheduleDeleteTool(
       itemShape: createItemShape(),
     },
     (item: DeleteItem) => deleteEventItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

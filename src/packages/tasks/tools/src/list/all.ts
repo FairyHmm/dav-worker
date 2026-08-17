@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
 import { resolveKnownCategoryColor } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { ListCategorySchema } from "../utils/schemas";
 import type { Resolved } from "@dav-worker/batch-core";
 import type { DisabledShape } from "@dav-worker/config-parser";
@@ -18,6 +18,7 @@ export function registerListAllTool(
   server: McpServer,
   deps: TaskToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -36,6 +37,8 @@ export function registerListAllTool(
       itemShape: createItemShape(),
     },
     (item: AllItem) => listAllItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

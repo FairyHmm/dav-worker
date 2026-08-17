@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
 import { resolveTimeWindow } from "@dav-worker/time-utils";
@@ -24,6 +24,7 @@ export function registerScheduleListTool(
   server: McpServer,
   deps: CalendarToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -42,6 +43,8 @@ export function registerScheduleListTool(
       itemShape: createItemShape(deps),
     },
     (item: ListItem) => listEventItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

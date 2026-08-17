@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { TaskToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { slugify } from "../utils/slugify";
 import {
   TaskIdSchema,
@@ -46,6 +46,7 @@ export function registerTaskUpdateTool(
   server: McpServer,
   deps: TaskToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -64,6 +65,8 @@ export function registerTaskUpdateTool(
       itemShape: createItemShape(),
     },
     (item: UpdateItem) => updateTaskItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

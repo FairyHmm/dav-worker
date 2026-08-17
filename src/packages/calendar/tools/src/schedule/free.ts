@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CalendarToolsDeps } from "../deps";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { z } from "zod";
 import { filterCategorySchema, TimeWindowSchema } from "../utils/schemas";
 import { resolveCalendarName, allCalendarNames } from "../calendars";
@@ -70,6 +70,7 @@ export function registerScheduleFreeTool(
   server: McpServer,
   deps: CalendarToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -90,6 +91,8 @@ export function registerScheduleFreeTool(
       itemShape: createItemShape(deps),
     },
     (item: FreeItem) => findFreeSlotsItem(deps, item),
+    undefined,
+    collector,
   );
 }
 

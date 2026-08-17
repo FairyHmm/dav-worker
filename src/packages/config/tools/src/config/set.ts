@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { writeSection } from "@dav-worker/config-parser";
-import { ok, err, defineTool } from "@dav-worker/mcp-utils";
+import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import type { ConfigToolsDeps } from "../deps";
 import { SectionSchema, ValueSchema } from "../utils/schemas";
 import { readConfigContent } from "../utils/read-content";
@@ -23,6 +23,7 @@ export function registerConfigSetTool(
   server: McpServer,
   deps: ConfigToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
   defineTool(
     server,
@@ -51,6 +52,7 @@ export function registerConfigSetTool(
       didApply: (result: { isError?: boolean } | { content: unknown[] }) =>
         !("isError" in result && result.isError),
     },
+    collector,
   );
 }
 

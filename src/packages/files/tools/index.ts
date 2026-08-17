@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import type { DisabledShape } from "@dav-worker/config-parser";
+import type { ToolEntry } from "@dav-worker/mcp-utils";
 import type { FileToolsDeps } from "./src/deps";
 
 import { registerFileReadTool } from "./src/file/read";
@@ -18,14 +19,15 @@ export function registerFileTools(
   server: McpServer,
   deps: FileToolsDeps,
   disabled: DisabledShape,
+  collector?: ToolEntry[],
 ): void {
-  registerFileReadTool(server, deps, disabled);
-  registerFileWriteTool(server, deps, disabled);
-  registerFileOutlineTool(server, deps, disabled);
-  registerDirListTool(server, deps, disabled);
-  registerDirCreateTool(server, deps, disabled);
-  registerEntryCopyTool(server, deps, disabled);
-  registerEntryMoveTool(server, deps, disabled);
-  registerEntryDeleteTool(server, deps, disabled);
-  registerEntryStatTool(server, deps, disabled);
+  registerFileReadTool(server, deps, disabled, collector);
+  registerFileWriteTool(server, deps, disabled, collector);
+  registerFileOutlineTool(server, deps, disabled, collector);
+  registerDirListTool(server, deps, disabled, collector);
+  registerDirCreateTool(server, deps, disabled, collector);
+  registerEntryCopyTool(server, deps, disabled, collector);
+  registerEntryMoveTool(server, deps, disabled, collector);
+  registerEntryDeleteTool(server, deps, disabled, collector);
+  registerEntryStatTool(server, deps, disabled, collector);
 }

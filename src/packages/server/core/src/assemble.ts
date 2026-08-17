@@ -11,6 +11,11 @@ export async function assembleServer(
   configPath: string | undefined,
 ): Promise<void> {
   const storages = createStorages(credential);
-  await registerTools(server, storages, configContent, configPath);
-  registerResources(server);
+  const tools = await registerTools(
+    server,
+    storages,
+    configContent,
+    configPath,
+  );
+  registerResources(server, tools);
 }
