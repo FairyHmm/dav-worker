@@ -4,3 +4,4 @@
 export * from "./src/lib/components/ui/index";
 export { callTool } from "./src/utils/mcp";
 export { toast } from "./src/utils/toast.svelte";
+export { installDevBridge } from "./src/utils/dev-bridge";

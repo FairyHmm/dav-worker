@@ -117,7 +117,9 @@ export function defineTool<
     name,
     {
       description,
-      annotations,
+      // category rides on annotations so tools/list carries it to the config
+      // UI; the SDK's ToolAnnotations type doesn't declare it, hence the cast.
+      annotations: { ...annotations, category } as Record<string, unknown>,
       _meta: {
         ...(ui && {
           ui: {

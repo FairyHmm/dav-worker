@@ -9,7 +9,7 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite build && concurrently -n http,vite -c blue,cyan --kill-others-on-fail 'pnpm -F @dav-worker/app-local start:http' 'sleep 2 && vite'",
     "build": "vite build"
   },
   "dependencies": {
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
     "@tailwindcss/vite": "^4.3.3",
+    "concurrently": "^10.0.5",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.0",
     "vite-plugin-singlefile": "^2.3.3"

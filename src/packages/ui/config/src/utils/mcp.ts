@@ -18,7 +18,8 @@ export async function setSection(
 }
 
 export async function listTools(): Promise<ToolEntry[]> {
-  const raw = await callTool("tools_list", {});
-  const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-  return Array.isArray(parsed) ? (parsed as ToolEntry[]) : [];
+  // Injected at resource-serve time by registerResources as window.__mcp_tools__.
+  // In dev the bridge doesn't inject this, so fall back to empty.
+  const injected = (window as unknown as Record<string, unknown>).__mcp_tools__;
+  return Array.isArray(injected) ? (injected as ToolEntry[]) : [];
 }
