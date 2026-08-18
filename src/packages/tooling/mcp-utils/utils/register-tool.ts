@@ -1,6 +1,5 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
-import type { ZodRawShape, z } from "zod";
+import type { McpServer, CallToolResult } from "@modelcontextprotocol/server";
+import { z, type ZodRawShape } from "zod";
 import { resolve, type DisabledShape } from "@dav-worker/config-parser";
 import {
   withBatchSupport,
@@ -127,10 +126,10 @@ export function defineTool<
           },
         }),
       },
-      inputSchema: {
+      inputSchema: z.object({
         ...itemShape,
         ...withBatchSupport(itemShape),
-      },
+      }),
     },
     // Overload work-around: runBatchTool has two overloads but a pass-through
     // call can't preserve which variant was selected. Restating the

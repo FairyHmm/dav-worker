@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { registerFileTools } from "@dav-worker/files-tools";
 import { buildFilesConfig } from "@dav-worker/files-locations";
 import {

@@ -1,8 +1,8 @@
+import { McpServer } from "@modelcontextprotocol/server";
+
 // Local dev composition root, independent of app/worker (SPEC-MONOREPO.md
 // step 10). No OAuth round-trip — reads credential + config path from env
 // vars and serves directly, no consent screen or token exchange.
-
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { assembleServer, loadConfig } from "@dav-worker/server-core";
 import { createNextcloudWebDAVStorage } from "@dav-worker/storage-nextcloud";
 import { readFile } from "node:fs/promises";

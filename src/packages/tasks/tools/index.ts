@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { DisabledShape } from "@dav-worker/config-parser";
 import type { ToolEntry } from "@dav-worker/mcp-utils";
 import type { TaskToolsDeps } from "./src/deps";

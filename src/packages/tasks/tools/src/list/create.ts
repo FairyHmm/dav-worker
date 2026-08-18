@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { TaskToolsDeps } from "../deps";
 import { resolveKnownCategoryColor } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";

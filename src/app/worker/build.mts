@@ -89,28 +89,6 @@ const buildOptions: BuildOptions = {
         stub: "export {};",
       },
       {
-        // Dead codepath (no email routing here); drops mime-db's ~186KB. Throws if hit.
-        name: "mimetext",
-        resolveFrom: "mimetext",
-        stub: function createMimeMessage() {
-          throw new Error(
-            "mimetext stubbed by worker-trim: replyToEmail is not supported in this build",
-          );
-        },
-      },
-      {
-        // MCP SDK always imports ajv-provider statically; stubbing it (not the
-        // transport files) drops ~100KB regardless of entry point.
-        name: "mcp-sdk-ajv-provider",
-        resolveFrom: "../validation/ajv-provider.js",
-        stub: function AjvJsonSchemaValidator() {
-          throw new Error(
-            "AjvJsonSchemaValidator stubbed by worker-trim: dav-worker always supplies " +
-              "CfWorkerJsonSchemaValidator explicitly",
-          );
-        },
-      },
-      {
         // zod-to-json-schema and the MCP SDK's zod-compat.js both pull in the
         // full zod v3 class hierarchy (~56KB) just for compat fallbacks
         // dav-worker never hits, since all schemas here are zod v4.

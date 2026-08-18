@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { FileToolsDeps } from "../deps";
 import { outline } from "@dav-worker/files-parser";
 import { resolveFromExtension } from "@dav-worker/files-types";

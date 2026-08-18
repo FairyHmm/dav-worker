@@ -1,4 +1,4 @@
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { createMcpServer, getCredential, getConfigPath } from "./src/server";
 
 async function main(): Promise<void> {

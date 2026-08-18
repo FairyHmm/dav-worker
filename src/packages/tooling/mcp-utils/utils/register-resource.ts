@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { McpServer } from "@modelcontextprotocol/server";
 
 // Wraps server.registerResource for MCP Apps UI resources
 export function defineResource(

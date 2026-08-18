@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { FileToolsDeps } from "../deps";
 import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";
 import { resolvePath } from "../utils/path";

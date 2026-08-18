@@ -24,7 +24,7 @@
     "@dav-worker/server-core": "workspace:*",
     "@dav-worker/storage-nextcloud": "workspace:*",
     "@dav-worker/ui-shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "svelte": "^5.0.0"
   },
   "devDependencies": {

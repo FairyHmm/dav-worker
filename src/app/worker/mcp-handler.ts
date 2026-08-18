@@ -1,4 +1,4 @@
-import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/server";
 import { WebDAVHttpError } from "@dav-worker/storage-nextcloud";
 import { open } from "./auth";
 import { createServer } from "./session/bootstrap";

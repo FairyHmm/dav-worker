@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { defineResource, type ToolEntry } from "@dav-worker/mcp-utils";
 import { configHtml } from "@dav-worker/ui-config/dist/asset";
 

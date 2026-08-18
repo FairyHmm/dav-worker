@@ -1,5 +1,5 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/server/validators/cf-worker";
+import { McpServer } from "@modelcontextprotocol/server";
 import { assembleServer, loadConfig } from "@dav-worker/server-core";
 import { createNextcloudWebDAVStorage } from "@dav-worker/storage-nextcloud";
 import type { SessionProps } from "./types";

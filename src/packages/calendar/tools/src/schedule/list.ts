@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { CalendarToolsDeps } from "../deps";
 import { WebDAVHttpError } from "@dav-worker/clients-webdav";
 import { ok, err, defineTool, type ToolEntry } from "@dav-worker/mcp-utils";

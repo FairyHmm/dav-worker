@@ -21,6 +21,6 @@
     "@dav-worker/ui-config": "workspace:*"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0"
+    "@modelcontextprotocol/server": "^2.0.0"
   }
 }

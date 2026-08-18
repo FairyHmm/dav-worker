@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import { createMcpServer, getCredential, getConfigPath } from "./src/server";
 
 const PORT = Number(process.env.LOCAL_HTTP_PORT ?? 3747);
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     }
 
     const server = await createMcpServer(credential, configPath);
-    const transport = new StreamableHTTPServerTransport({
+    const transport = new NodeStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
     });
     await server.connect(transport);
