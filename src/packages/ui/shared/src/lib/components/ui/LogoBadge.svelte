@@ -2,7 +2,6 @@
   import type { Snippet } from "svelte";
   import type { HTMLAttributes } from "svelte/elements";
   import { cva, type VariantProps } from "class-variance-authority";
-  import { cn } from "$lib/utils.js";
 
   const logoBadgeVariants = cva(
     "flex size-11 items-center justify-center overflow-hidden rounded-host-lg border border-host-border-secondary",
@@ -32,6 +31,6 @@
   } = $props();
 </script>
 
-<div class={cn(logoBadgeVariants({ variant, className }))} {...restProps}>
+<div class={logoBadgeVariants({ variant, className })} {...restProps}>
   {@render children?.()}
 </div>

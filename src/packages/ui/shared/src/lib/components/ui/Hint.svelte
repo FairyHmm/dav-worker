@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { HTMLAttributes } from "svelte/elements";
-  import { cn } from "$lib/utils.js";
+  import { clsx } from "clsx";
 
   let {
     class: className,
@@ -10,7 +10,7 @@
 </script>
 
 <p
-  class={cn(
+  class={clsx(
     "text-host-sm text-host-text-tertiary leading-snug mt-1 mb-0",
     className,
   )}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { HTMLAttributes } from "svelte/elements";
-  import { cn } from "$lib/utils.js";
+  import { clsx } from "clsx";
 
   let {
     class: className,
@@ -11,7 +11,7 @@
 </script>
 
 <div
-  class={cn(
+  class={clsx(
     "rounded-xl border bg-card text-card-foreground shadow-sm",
     className,
   )}
