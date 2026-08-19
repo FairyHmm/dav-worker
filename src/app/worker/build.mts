@@ -54,6 +54,18 @@ function zodV3ObjectUnreachable() {
   );
 }
 
+// EntityDecoder only calls isUnsafe(value, [HTML, XML]); the other context
+// tables are dead weight pulled in by is-unsafe's eager .label assignment.
+const IS_UNSAFE_DEAD_CONTEXTS = [
+  "svg",
+  "sql",
+  "shell",
+  "redos",
+  "nosql",
+  "log",
+  "sql-strict",
+] as const;
+
 const buildOptions: BuildOptions = {
   entryPoints: ["index.ts"],
   bundle: true,
@@ -87,6 +99,39 @@ const buildOptions: BuildOptions = {
         name: "zod-non-english-locales",
         resolveFrom: "../locales/index.js",
         stub: "export {};",
+      },
+      // The unused is-unsafe context tables above.
+      ...IS_UNSAFE_DEAD_CONTEXTS.map((ctx) => ({
+        name: `is-unsafe-context-${ctx}`,
+        resolveFrom: `./contexts/${ctx}.js`,
+        stub: "export default [];",
+      })),
+      {
+        // XMLParser.validate() only runs when a truthy validationOption is
+        // passed, which dav-worker's XML parsing never does (~4.9KB).
+        name: "fast-xml-parser-validator",
+        resolveFrom: "../validator.js",
+        stub: "export function validate(){ throw new Error('fast-xml-parser validator stubbed by worker-trim (dav-worker never enables XML validation)'); }",
+      },
+      {
+        // WebDAV/CalDAV responses never contain <!DOCTYPE>. setXmlVersion()
+        // still fires per <?xml ...?>, so keep it as a no-op. Drops ~5KB + deps.
+        name: "fast-xml-parser-doc-type-reader",
+        resolveFrom: "./DocTypeReader.js",
+        stub: [
+          "export default class DocTypeReader {",
+          "  constructor(options) { this.suppressValidationErr = !options; this.options = options; }",
+          "  setXmlVersion() {}",
+          "  readDocType() { throw new Error('<!DOCTYPE> not supported in dav-worker (stubbed by worker-trim)'); }",
+          "}",
+        ].join("\n"),
+      },
+      {
+        // All MCP schemas come from zod, so the JSON Schema -> zod converter
+        // is never used here.
+        name: "zod-from-json-schema",
+        resolveFrom: "./from-json-schema.js",
+        stub: "export function fromJSONSchema(){ throw new Error('zod from-json-schema stubbed by worker-trim (unused in dav-worker)'); }",
       },
       {
         // zod-to-json-schema and the MCP SDK's zod-compat.js both pull in the
