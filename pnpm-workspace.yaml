@@ -1,5 +1,6 @@
 packages:
   - "src/app/*"
+  - "src/packages/*"
   - "src/packages/*/*"
 
 # Pre-approve build scripts for the packages C3 itself installs that need

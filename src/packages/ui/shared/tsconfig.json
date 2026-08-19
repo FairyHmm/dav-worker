@@ -3,6 +3,10 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "./dist",
+    // scripts/*.ts are run directly via tsx (not through Vite's resolver),
+    // and import each other and the vite/ plugin files with explicit .ts
+    // extensions so tsx and Node ESM can resolve them at runtime.
+    "allowImportingTsExtensions": true,
     "paths": {
       "$lib": ["./src/lib"],
       "$lib/*": ["./src/lib/*"]

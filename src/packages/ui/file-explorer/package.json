@@ -1,6 +1,6 @@
 {
   "name": "@dav-worker/ui-file-explorer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "author": "Fairy",
   "license": "AGPL-3.0-only",
@@ -9,6 +9,7 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "scripts": {
+    "dev": "node ../shared/scripts/dev-ui.mjs",
     "build": "vite build"
   },
   "dependencies": {
