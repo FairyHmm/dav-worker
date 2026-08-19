@@ -12,7 +12,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "build:ui": "pnpm --filter \"./src/packages/ui/*\" build",
-    "deploy:worker": "pnpm -F @dav-worker/app-worker deploy",
+    "deploy:worker": "pnpm -F @dav-worker/app-worker run deploy",
     "dry-run:worker": "pnpm -F @dav-worker/app-worker dry-run",
     "format": "oxfmt --write .",
     "lint": "oxlint",

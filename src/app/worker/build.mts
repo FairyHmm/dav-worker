@@ -1,61 +1,16 @@
-// Replaces Wrangler's internal esbuild pass so worker-trim's stub plugin can run
-// (Wrangler can't take esbuild plugins: cloudflare/workers-sdk#234).
-import * as esbuild from "esbuild";
-import type { BuildOptions } from "esbuild";
-import { stubModulesPlugin } from "@dav-worker/worker-trim";
+import { rollup } from "rollup";
+import type { Plugin } from "rollup";
+import nodeResolve from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
+import esbuild from "rollup-plugin-esbuild";
+import terser from "@rollup/plugin-terser";
+import { readFile } from "node:fs/promises";
+import { rollupStub } from "@dav-worker/worker-trim";
+import type { StubTarget } from "@dav-worker/worker-trim";
 
-// zod/v3's ZodFirstPartyTypeKind enum keys (types.js), as data to avoid
-// hand-formatting an object literal in the stub string below.
-const ZOD_V3_TYPE_KINDS = [
-  "ZodString",
-  "ZodNumber",
-  "ZodNaN",
-  "ZodBigInt",
-  "ZodBoolean",
-  "ZodDate",
-  "ZodSymbol",
-  "ZodUndefined",
-  "ZodNull",
-  "ZodAny",
-  "ZodUnknown",
-  "ZodNever",
-  "ZodVoid",
-  "ZodArray",
-  "ZodObject",
-  "ZodUnion",
-  "ZodDiscriminatedUnion",
-  "ZodIntersection",
-  "ZodTuple",
-  "ZodRecord",
-  "ZodMap",
-  "ZodSet",
-  "ZodFunction",
-  "ZodLazy",
-  "ZodLiteral",
-  "ZodEnum",
-  "ZodEffects",
-  "ZodNativeEnum",
-  "ZodOptional",
-  "ZodNullable",
-  "ZodDefault",
-  "ZodCatch",
-  "ZodPromise",
-  "ZodBranded",
-  "ZodPipeline",
-  "ZodReadonly",
-] as const;
-
-// zod-v3-compat-shim needs two exports (enum data + object()), and worker-trim
-// only takes one stub per resolveFrom - can't split across two targets.
-function zodV3ObjectUnreachable() {
-  throw new Error(
-    "zod/v3 stubbed by worker-trim: dav-worker only constructs zod v4 schemas, " +
-      "so the SDK's zod-compat.js v3 fallback should be unreachable",
-  );
-}
-
-// EntityDecoder only calls isUnsafe(value, [HTML, XML]); the other context
-// tables are dead weight pulled in by is-unsafe's eager .label assignment.
+// EntityDecoder only ever uses the HTML/XML contexts; the rest are dead weight
+// that is-unsafe's eager .label assignment drags in.
 const IS_UNSAFE_DEAD_CONTEXTS = [
   "svg",
   "sql",
@@ -66,96 +21,110 @@ const IS_UNSAFE_DEAD_CONTEXTS = [
   "sql-strict",
 ] as const;
 
-const buildOptions: BuildOptions = {
-  entryPoints: ["index.ts"],
-  bundle: true,
-  minify: true,
-  treeShaking: true,
-  format: "esm",
-  platform: "node",
-  conditions: ["workerd", "worker"],
-  external: ["cloudflare:*"],
-  outfile: "dist/index.js",
-  sourcemap: true,
-  metafile: true,
-
-  // no_bundle:true skips Wrangler's own .toml/.csv text loader too
-  loader: {
-    ".toml": "text",
-    ".html": "text",
+const stubTargets: StubTarget[] = [
+  {
+    // dav-worker never authors named HTML entities, so decoding them costs 60KB for nothing.
+    name: "character-entities",
+    resolveFrom: "character-entities",
+    stub: "export const characterEntities = {};",
   },
+  ...IS_UNSAFE_DEAD_CONTEXTS.map((ctx) => ({
+    name: `is-unsafe-context-${ctx}`,
+    resolveFrom: `./contexts/${ctx}.js`,
+    stub: "export default [];",
+  })),
+  {
+    // validate() only runs when a truthy validationOption is passed, which dav-worker never does.
+    name: "fast-xml-parser-validator",
+    resolveFrom: "../validator.js",
+    stub: "export function validate(){ throw new Error('fast-xml-parser validator stubbed by worker-trim (dav-worker never enables XML validation)'); }",
+  },
+  {
+    // WebDAV/CalDAV never serves <!DOCTYPE>; keep setXmlVersion() as a no-op since it still fires per <?xml?>.
+    name: "fast-xml-parser-doc-type-reader",
+    resolveFrom: "./DocTypeReader.js",
+    stub: [
+      "export default class DocTypeReader {",
+      "  constructor(options) { this.suppressValidationErr = !options; this.options = options; }",
+      "  setXmlVersion() {}",
+      "  readDocType() { throw new Error('<!DOCTYPE> not supported in dav-worker (stubbed by worker-trim)'); }",
+      "}",
+    ].join("\n"),
+  },
+  {
+    // All MCP schemas come from zod, so the JSON Schema -> zod converter is never used.
+    name: "zod-from-json-schema",
+    resolveFrom: "./from-json-schema.js",
+    stub: "export function fromJSONSchema(){ throw new Error('zod from-json-schema stubbed by worker-trim (unused in dav-worker)'); }",
+  },
+];
 
+// wrangler.jsonc's Text rule for .toml/.csv doesn't apply now that we bundle ourselves, so imports need a loader here.
+const textModuleLoader = (): Plugin => ({
+  name: "worker-trim-text-loader",
+  async load(id) {
+    if (!/\.(html|toml)$/.test(id)) return null;
+    const contents = await readFile(id, "utf8");
+    return {
+      code: `export default ${JSON.stringify(contents)}`,
+      moduleSideEffects: false,
+    };
+  },
+});
+
+// Wrangler can't run esbuild plugins (workers-sdk#234), so we bundle here;
+// rollup + terser also beat esbuild's output by ~50KB / 6%.
+const bundle = await rollup({
+  input: "index.ts",
+  treeshake: {
+    moduleSideEffects: false,
+  },
   plugins: [
-    stubModulesPlugin([
-      {
-        // dav-worker's content never authors named HTML entities, so
-        // decoding them on markdown parse buys nothing worth 60KB.
-        name: "character-entities",
-        resolveFrom: "character-entities",
-        stub: "export const characterEntities = {};",
-      },
-      {
-        // Only `en` is used for error messages; this drops ~270KB of other locales.
-        name: "zod-non-english-locales",
-        resolveFrom: "../locales/index.js",
-        stub: "export {};",
-      },
-      // The unused is-unsafe context tables above.
-      ...IS_UNSAFE_DEAD_CONTEXTS.map((ctx) => ({
-        name: `is-unsafe-context-${ctx}`,
-        resolveFrom: `./contexts/${ctx}.js`,
-        stub: "export default [];",
-      })),
-      {
-        // XMLParser.validate() only runs when a truthy validationOption is
-        // passed, which dav-worker's XML parsing never does (~4.9KB).
-        name: "fast-xml-parser-validator",
-        resolveFrom: "../validator.js",
-        stub: "export function validate(){ throw new Error('fast-xml-parser validator stubbed by worker-trim (dav-worker never enables XML validation)'); }",
-      },
-      {
-        // WebDAV/CalDAV responses never contain <!DOCTYPE>. setXmlVersion()
-        // still fires per <?xml ...?>, so keep it as a no-op. Drops ~5KB + deps.
-        name: "fast-xml-parser-doc-type-reader",
-        resolveFrom: "./DocTypeReader.js",
-        stub: [
-          "export default class DocTypeReader {",
-          "  constructor(options) { this.suppressValidationErr = !options; this.options = options; }",
-          "  setXmlVersion() {}",
-          "  readDocType() { throw new Error('<!DOCTYPE> not supported in dav-worker (stubbed by worker-trim)'); }",
-          "}",
-        ].join("\n"),
-      },
-      {
-        // All MCP schemas come from zod, so the JSON Schema -> zod converter
-        // is never used here.
-        name: "zod-from-json-schema",
-        resolveFrom: "./from-json-schema.js",
-        stub: "export function fromJSONSchema(){ throw new Error('zod from-json-schema stubbed by worker-trim (unused in dav-worker)'); }",
-      },
-      {
-        // zod-to-json-schema and the MCP SDK's zod-compat.js both pull in the
-        // full zod v3 class hierarchy (~56KB) just for compat fallbacks
-        // dav-worker never hits, since all schemas here are zod v4.
-        name: "zod-v3-compat-shim",
-        resolveFrom: "zod/v3",
-        stub: [
-          `export const ZodFirstPartyTypeKind = { ${ZOD_V3_TYPE_KINDS.map(
-            (k) => `${k}: ${JSON.stringify(k)}`,
-          ).join(", ")} };`,
-          `export const object = ${zodV3ObjectUnreachable.toString()};`,
-        ].join("\n"),
-      },
-    ]),
+    rollupStub(stubTargets),
+    textModuleLoader(),
+    nodeResolve({
+      exportConditions: ["workerd", "worker"],
+      extensions: [".ts", ".mjs", ".js", ".jsx", ".tsx", ".json"],
+    }),
+    commonjs(),
+    json(),
+    esbuild({ target: "esnext", sourceMap: true, minifyWhitespace: false }),
+    terser({ module: true, compress: { passes: 2 }, mangle: true }),
   ],
-};
+  external: (id) => id.startsWith("cloudflare:"),
+  onwarn(warning, warn) {
+    if (warning.code === "CIRCULAR_DEPENDENCY") return;
+    warn(warning);
+  },
+});
 
-const result = await esbuild.build(buildOptions);
+const output = await bundle.generate({ format: "esm", sourcemap: true });
+await bundle.close();
+
+const chunk = output.output[0];
+const fs = await import("node:fs/promises");
+await fs.writeFile("dist/index.js", chunk.code);
+if (chunk.map) await fs.writeFile("dist/index.js.map", chunk.map.toString());
 
 console.log("worker-trim: build complete -> dist/index.js");
 
 if (process.env.WORKER_TRIM_METAFILE) {
-  const fs = await import("node:fs/promises");
-  await fs.writeFile("dist/meta.json", JSON.stringify(result.metafile));
+  const stat = await Promise.all(
+    bundle.watchFiles.map((p) => fs.stat(p).catch(() => null)),
+  );
+  const inputs = Object.fromEntries(
+    bundle.watchFiles.map((p, i) => [
+      p.replace(`${process.cwd()}/`, ""),
+      stat[i]?.size ?? 0,
+    ]),
+  );
+  await fs.writeFile(
+    "dist/meta.json",
+    JSON.stringify(
+      { inputs, outputs: { [chunk.fileName]: { bytes: chunk.code.length } } },
+      null,
+      1,
+    ),
+  );
   console.log("worker-trim: wrote dist/meta.json");
 }

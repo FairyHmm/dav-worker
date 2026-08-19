@@ -1,2 +1,3 @@
-export { stubModulesPlugin } from "./src/plugin";
-export type { StubTarget } from "./src/stub-module";
+export { esbuildStub } from "./src/esbuild";
+export { rollupStub } from "./src/rollup";
+export type { StubTarget } from "./src/stub";
