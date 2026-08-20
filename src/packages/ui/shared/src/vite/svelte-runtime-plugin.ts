@@ -4,7 +4,18 @@ import { fileURLToPath } from "url";
 import type { Plugin, ResolvedConfig } from "vite";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const RUNTIME_PATH = resolve(__dirname, "../../dist/svelte-runtime.js");
+const RUNTIME_META_PATH = resolve(
+  __dirname,
+  "../../dist/svelte-runtime.meta.json",
+);
+
+// build-runtime.ts writes fileName/hash into the meta file; reading it back
+// here is how this plugin learns the content-hashed filename without
+// recomputing the hash itself.
+function readRuntimeMeta(): { fileName: string } | null {
+  if (!existsSync(RUNTIME_META_PATH)) return null;
+  return JSON.parse(readFileSync(RUNTIME_META_PATH, "utf-8"));
+}
 
 const NAMESPACE_IMPORT_RE =
   /import\s*\*\s*as\s+([A-Za-z_$]\w*)\s*from\s*["']svelte\/internal\/client["'];?\s*/g;
@@ -25,17 +36,19 @@ function rewriteSvelteImports(code: string): string {
     .replace(NAMESPACE_RE, "const $1=__svelte_runtime__")
     .replace(NAMED_RE, (_, imports: string, spec: string) => {
       if (!spec.startsWith("svelte")) return _;
-      const names = imports
+      // Use explicit key:value pairs (e.g. {mount:mount}) so the minifier
+      // can rename the binding without mangling the property key — shorthand
+      // destructuring {mount} becomes {t} after mangle, breaking the lookup.
+      const pairs = imports
         .split(",")
-        .map((s: string) =>
-          s
-            .trim()
-            .split(/\s+as\s+/)
-            .pop()
-            ?.trim(),
-        )
+        .map((s: string) => {
+          const parts = s.trim().split(/\s+as\s+/);
+          const key = parts[0].trim();
+          const local = parts.pop()!.trim();
+          return `${key}:${local}`;
+        })
         .filter(Boolean);
-      return `const{${names.join(",")}}=__svelte_runtime__`;
+      return `const{${pairs.join(",")}}=__svelte_runtime__`;
     })
     .replace(DISCARD_RE, (m, spec: string) =>
       spec.startsWith("svelte") ? "" : m,
@@ -52,8 +65,11 @@ const MODULE_SCRIPT_RE =
 const UNREWRITTEN_SVELTE_IMPORT_RE =
   /\b(?:im|ex)port[^;\n]*["']svelte(?:\/|["'])/;
 
-export function injectRuntime(html: string, runtimeCode: string): string {
-  html = html.replace("</head>", `<script>${runtimeCode}</script></head>`);
+export function injectRuntime(html: string, runtimeUrl: string): string {
+  html = html.replace(
+    "</head>",
+    `<script src="${runtimeUrl}"></script></head>`,
+  );
   const result = html.replace(
     MODULE_SCRIPT_RE,
     (_, opening: string, code: string, closing: string) =>
@@ -84,7 +100,8 @@ export function svelteRuntimePlugin(options?: {
 }): Plugin {
   const assetVarName = options?.assetVarName ?? "configHtml";
   let config: ResolvedConfig;
-  const usedExports = new Set<string>();
+  const usedInternalExports = new Set<string>();
+  const usedSvelteExports = new Set<string>();
 
   return {
     name: "svelte-runtime",
@@ -94,11 +111,9 @@ export function svelteRuntimePlugin(options?: {
     transform: {
       order: "post",
       handler(code, id) {
-        if (id.includes("node_modules")) return null;
-        // Compiled Svelte imports client as a namespace and calls members on
-        // it; only those members need to exist in the shared runtime.
+        // Detect namespace imports from svelte/internal/client and track
+        // which members are accessed (e.g. ns.each → "each").
         const nsMatches = [...code.matchAll(NAMESPACE_IMPORT_RE)];
-        if (nsMatches.length === 0) return null;
         for (const match of nsMatches) {
           const ns = match[1];
           const accessRe = new RegExp(
@@ -107,7 +122,22 @@ export function svelteRuntimePlugin(options?: {
           );
           let m;
           while ((m = accessRe.exec(code)) !== null) {
-            usedExports.add(m[1]);
+            usedInternalExports.add(m[1]);
+          }
+        }
+        // Also detect named imports from top-level "svelte" (e.g. mount,
+        // getContext) — these must be explicitly re-exported by the runtime.
+        const NAMED_SVELTE_RE =
+          /import\s*\{([^}]*)\}\s*from\s*["']svelte["'];?/g;
+        let nm;
+        while ((nm = NAMED_SVELTE_RE.exec(code)) !== null) {
+          for (const name of nm[1].split(",")) {
+            const trimmed = name
+              .trim()
+              .split(/\s+as\s+/)
+              .pop()
+              ?.trim();
+            if (trimmed) usedSvelteExports.add(trimmed);
           }
         }
         return null;
@@ -119,19 +149,28 @@ export function svelteRuntimePlugin(options?: {
       // Feeds build-runtime, which emits only the exports apps actually use.
       writeFileSync(
         resolve(outDir, "used-exports.json"),
-        JSON.stringify([...usedExports].sort(), null, 2),
+        JSON.stringify(
+          {
+            svelte: [...usedSvelteExports].sort(),
+            internal: [...usedInternalExports].sort(),
+          },
+          null,
+          2,
+        ),
       );
     },
     closeBundle() {
       // First-pass builds run before the runtime exists; skip them, the second
       // pass (build-all) rebuilds with the runtime in place.
-      if (!existsSync(RUNTIME_PATH)) return;
+      const meta = readRuntimeMeta();
+      if (!meta) return;
 
       const outDir = resolve(config.root, config.build.outDir);
       const htmlPath = resolve(outDir, "index.html");
       const html = readFileSync(htmlPath, "utf-8");
-      const runtimeCode = readFileSync(RUNTIME_PATH, "utf-8");
-      const asset = injectRuntime(html, runtimeCode);
+      // Content-hashed path so the worker can serve this as an immutable
+      // cache entry — a runtime content change always yields a new URL.
+      const asset = injectRuntime(html, `/${meta.fileName}`);
 
       writeFileSync(
         resolve(outDir, "asset.ts"),

@@ -6,8 +6,11 @@ import json from "@rollup/plugin-json";
 import esbuild from "rollup-plugin-esbuild";
 import terser from "@rollup/plugin-terser";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { rollupStub } from "@dav-worker/worker-trim";
 import type { StubTarget } from "@dav-worker/worker-trim";
+import { svelteRuntimeLoader } from "@dav-worker/ui-shared/svelte-runtime-loader";
+import { svgLoader } from "@dav-worker/ui-shared/svg-loader";
 
 // EntityDecoder only ever uses the HTML/XML contexts; the rest are dead weight
 // that is-unsafe's eager .label assignment drags in.
@@ -59,7 +62,8 @@ const stubTargets: StubTarget[] = [
   },
 ];
 
-// wrangler.jsonc's Text rule for .toml/.csv doesn't apply now that we bundle ourselves, so imports need a loader here.
+// wrangler.jsonc's Text rule for .toml/.csv doesn't apply now that we bundle
+// ourselves, so imports need a loader here.
 const textModuleLoader = (): Plugin => ({
   name: "worker-trim-text-loader",
   async load(id) {
@@ -72,16 +76,18 @@ const textModuleLoader = (): Plugin => ({
   },
 });
 
+const CONSENT_ASSETS = resolve(import.meta.dirname, "consent/src/assets");
+
 // Wrangler can't run esbuild plugins (workers-sdk#234), so we bundle here;
 // rollup + terser also beat esbuild's output by ~50KB / 6%.
 const bundle = await rollup({
   input: "index.ts",
-  treeshake: {
-    moduleSideEffects: false,
-  },
+  treeshake: { moduleSideEffects: false },
   plugins: [
     rollupStub(stubTargets),
     textModuleLoader(),
+    svelteRuntimeLoader(),
+    svgLoader(CONSENT_ASSETS, "nextcloud-icon.svg"),
     nodeResolve({
       exportConditions: ["workerd", "worker"],
       extensions: [".ts", ".mjs", ".js", ".jsx", ".tsx", ".json"],

@@ -8,8 +8,8 @@
   "type": "module",
   "main": "./index.ts",
   "scripts": {
-    "build": "pnpm -w run build:ui && pnpm run build:consent && tsx build.mts",
-    "build:consent": "vite build --config consent/vite.config.ts",
+    "build": "pnpm run build:ui && tsx build.mts",
+    "build:ui": "tsx build-ui.mts",
     "dev": "wrangler dev -c wrangler.jsonc",
     "dev:consent": "vite dev --config consent/vite.config.ts",
     "deploy": "pnpm run build && wrangler deploy -c wrangler.jsonc",

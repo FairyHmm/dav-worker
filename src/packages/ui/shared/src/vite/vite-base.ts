@@ -2,10 +2,22 @@ import type { UserConfig } from "vite";
 import { svelte, vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { svelteRuntimePlugin } from "./svelte-runtime-plugin.ts";
 
-export function defineUiConfig(assetVarName: string): UserConfig {
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// Resolved from this file's own location rather than the caller's cwd, so
+// callers outside packages/ui/* (e.g. app/worker/consent) get the same
+// $lib target without needing to know ui-shared's relative depth.
+const SHARED_LIB = resolve(__dirname, "../lib");
+
+export function defineUiConfig(
+  assetVarName: string,
+  options?: { root?: string },
+): UserConfig {
   return {
+    root: options?.root,
     plugins: [
       svelte({ preprocess: [vitePreprocess()] }),
       tailwindcss(),
@@ -14,9 +26,9 @@ export function defineUiConfig(assetVarName: string): UserConfig {
     ],
     resolve: {
       alias: {
-        // Point $lib at ui-shared's sources so both apps share them as-is.
-        $lib: "../../ui/shared/src/lib",
-        "$lib/": "../../ui/shared/src/lib/",
+        // Point $lib at ui-shared's sources so every app shares them as-is.
+        $lib: SHARED_LIB,
+        "$lib/": SHARED_LIB + "/",
       },
     },
     server: {

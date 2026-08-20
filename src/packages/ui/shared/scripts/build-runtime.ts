@@ -7,6 +7,7 @@ import terser from "@rollup/plugin-terser";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createHash } from "crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const USAGE_PATH = resolve(__dirname, "../dist/used-exports.json");
@@ -17,12 +18,26 @@ const ENTRY = "\0svelte-runtime-entry";
 // Re-export only the client members apps actually use, so tree-shaking leaves
 // a minimal runtime; disclose-version and legacy flags are always imported by
 // compiled Svelte output.
-function buildEntry(usedExports: string[] | null): string {
-  const lines = ['export * from "svelte";'];
+interface UsedExports {
+  svelte: string[];
+  internal: string[];
+}
 
-  if (usedExports && usedExports.length > 0) {
+function buildEntry(used: UsedExports | null): string {
+  // Explicitly list top-level svelte exports — export * gets tree-shaken by
+  // rollup's IIFE output because nothing in the bundle references them.
+  const svelteExports = used?.svelte ?? [];
+  const lines: string[] = [];
+  if (svelteExports.length > 0) {
+    lines.push(`export { ${svelteExports.join(", ")} } from "svelte";`);
+  } else {
+    lines.push('export * from "svelte";');
+  }
+
+  const internalExports = used?.internal ?? [];
+  if (internalExports.length > 0) {
     lines.push(
-      `export { ${usedExports.join(", ")} } from "svelte/internal/client";`,
+      `export { ${internalExports.join(", ")} } from "svelte/internal/client";`,
     );
   } else {
     lines.push('export * from "svelte/internal/client";');
@@ -34,7 +49,7 @@ function buildEntry(usedExports: string[] | null): string {
   return lines.join("\n");
 }
 
-const svelteRuntimeEntry = (usedExports: string[] | null): Plugin => ({
+const svelteRuntimeEntry = (used: UsedExports | null): Plugin => ({
   name: "svelte-runtime-entry",
   resolveId(id) {
     if (id === ENTRY) return ENTRY;
@@ -42,19 +57,19 @@ const svelteRuntimeEntry = (usedExports: string[] | null): Plugin => ({
   },
   load(id) {
     if (id !== ENTRY) return null;
-    return buildEntry(usedExports);
+    return buildEntry(used);
   },
 });
 
 mkdirSync(resolve(__dirname, "../dist"), { recursive: true });
 
-const usedExports: string[] | null = existsSync(USAGE_PATH)
-  ? (JSON.parse(readFileSync(USAGE_PATH, "utf-8")) as string[])
+const used: UsedExports | null = existsSync(USAGE_PATH)
+  ? (JSON.parse(readFileSync(USAGE_PATH, "utf-8")) as UsedExports)
   : null;
 
-if (usedExports) {
+if (used) {
   console.log(
-    `build-runtime: building minimal runtime (${usedExports.length} exports)`,
+    `build-runtime: building minimal runtime (${used.svelte.length} svelte + ${used.internal.length} internal exports)`,
   );
 } else {
   console.log(
@@ -65,7 +80,7 @@ if (usedExports) {
 const bundle = await rollup({
   input: ENTRY,
   plugins: [
-    svelteRuntimeEntry(usedExports),
+    svelteRuntimeEntry(used),
     nodeResolve({
       exportConditions: ["browser"],
       extensions: [".js", ".ts", ".json"],
@@ -94,14 +109,26 @@ const output = await bundle.generate({
 await bundle.close();
 
 const chunk = output.output[0];
-const outPath = resolve(__dirname, "../dist/svelte-runtime.js");
+
+// Content-hashed filename so the worker can cache the response as
+// immutable — a content change always produces a new URL, so there's no
+// stale-cache window between deploy and cache expiry/purge.
+const hash = createHash("sha256").update(chunk.code).digest("hex").slice(0, 12);
+const fileName = `svelte-runtime.${hash}.js`;
+const outPath = resolve(__dirname, "../dist", fileName);
 writeFileSync(outPath, chunk.code);
 
 const bytes = chunk.code.length;
 writeFileSync(
   resolve(__dirname, "../dist/svelte-runtime.meta.json"),
+  // fileName/hash let consumers (the injection plugin, the worker route)
+  // reference this build's output without recomputing the hash themselves.
   // Size + timestamp so CI can catch runtime regressions across builds.
-  JSON.stringify({ bytes, timestamp: new Date().toISOString() }, null, 2),
+  JSON.stringify(
+    { fileName, hash, bytes, timestamp: new Date().toISOString() },
+    null,
+    2,
+  ),
 );
 
-console.log(`build-runtime: ${(bytes / 1024).toFixed(1)} kB`);
+console.log(`build-runtime: ${fileName} (${(bytes / 1024).toFixed(1)} kB)`);

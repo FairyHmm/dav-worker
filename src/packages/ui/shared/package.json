@@ -11,6 +11,9 @@
   "exports": {
     ".": "./index.ts",
     "./vite-base": "./src/vite/vite-base.ts",
+    "./build-all": "./scripts/build-all.ts",
+    "./svelte-runtime-loader": "./scripts/svelte-runtime-loader.ts",
+    "./svg-loader": "./scripts/svg-loader.ts",
     "./tokens.css": "./tokens.css"
   },
   "scripts": {
